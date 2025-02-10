@@ -1,3 +1,20 @@
+# divent 0.5-2
+
+## Features
+
+- Generalized Simpson's entropy: `ent_gen_simpson()` and `div_gen_simpson()`
+- Faith's PD: `div_pd()`
+- Allen at al's phylogenetic entropy: `ent_allen()`
+- Spatially explicit Simpson's entropy: `ent_sp_simpson()` and `ent_sp_simpsonEnvelope()`
+- Spatially explicit random communities: `rspcommunity()`
+- `species_distribution` methods for `wmppp` and `character` objects.
+- values of abundances are no longer limited to `.Machine$integer.max`.
+
+## External changes
+
+- Replaced `Geom*$default_aes` by their values for compatibility with ggplot2 3.6.0 (PR #2 by @teunbrand)
+
+
 # divent 0.4-4
 
 ## Features
@@ -13,9 +30,6 @@
 - Similarity-based diversity: `ent_similarity()` and `div_similarity()`
 - Rao's quadratic entropy: `ent_rao()`.
 - paracou_6_wmppp dataset.
-
-## TODO
-- Check gamma in accum_() functions.
 
 
 # divent 0.2-5

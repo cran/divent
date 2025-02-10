@@ -1,26 +1,26 @@
 #' Number of Species of a Community
-#' 
+#'
 #' Estimate the number of species from abundance or probability data.
 #' Several estimators are available to deal with incomplete sampling.
-#' 
-#' Bias correction requires the number of individuals. 
-#' Chao's correction techniques are from \insertCite{Chao2014;textual}{divent} 
-#' and \insertCite{Chiu2014a;textual}{divent}. 
-#' The Jackknife estimator is calculated by a straight adaptation of the code 
-#' by Ji-Ping Wang (jackknife in package **SPECIES**). 
-#' The optimal order is selected according to 
-#' \insertCite{Burnham1978,Burnham1979;textual}{divent}. 
-#' Many other estimators are available elsewhere, the ones implemented here are 
+#'
+#' Bias correction requires the number of individuals.
+#' Chao's estimation techniques are from \insertCite{Chao2014;textual}{divent}
+#' and \insertCite{Chiu2014a;textual}{divent}.
+#' The Jackknife estimator is calculated by a straight adaptation of the code
+#' by Ji-Ping Wang (jackknife in package **SPECIES**).
+#' The optimal order is selected according to
+#' \insertCite{Burnham1978,Burnham1979;textual}{divent}.
+#' Many other estimators are available elsewhere, the ones implemented here are
 #' necessary for other entropy estimations.
-#' 
-#' Richness can be estimated at a specified `level` of interpolation or 
-#' extrapolation, either a chosen sample size or sample coverage 
-#' \insertCite{Chiu2014a}{divent}, rather than its asymptotic value. 
-#' Extrapolation relies on the estimation of the asymptotic richness. 
-#' If `probability_estimator` is "naive", then the asymptotic estimation of 
-#' richness is made using the chosen `estimator`, else the asymptotic 
-#' distribution of the community is derived and its estimated richness adjusted 
-#' so that the richness of a sample of this distribution of the size of the 
+#'
+#' Richness can be estimated at a specified `level` of interpolation or
+#' extrapolation, either a chosen sample size or sample coverage
+#' \insertCite{Chiu2014a}{divent}, rather than its asymptotic value.
+#' Extrapolation relies on the estimation of the asymptotic richness.
+#' If `probability_estimator` is "naive", then the asymptotic estimation of
+#' richness is made using the chosen `estimator`, else the asymptotic
+#' distribution of the community is derived and its estimated richness adjusted
+#' so that the richness of a sample of this distribution of the size of the
 #' actual sample has the richness of the actual sample.
 #'
 #' @inheritParams check_divent_args
@@ -29,11 +29,11 @@
 #' @param ... Unused.
 #' The metacommunity if built by combining the community abundances with respect to their weight.
 #'
-#' @return A tibble with the site names, the estimators used and the estimated numbers of species.
+#' @returns A tibble with the site names, the estimators used and the estimated numbers of species.
 #'
 #' @references
 #' \insertAllCited{}
-#' 
+#'
 #' @examples
 #' # Diversity of each community
 #' div_richness(paracou_6_abd)
@@ -42,7 +42,7 @@
 #'
 #' # At 80% coverage
 #' div_richness(paracou_6_abd, level = 0.8)
-#' 
+#'
 #' @name div_richness
 NULL
 
@@ -57,55 +57,62 @@ div_richness <- function(x, ...) {
 
 #' @rdname div_richness
 #'
-#' @param estimator An estimator of richness to evaluate the total number of species. 
-#' @param level The level of interpolation or extrapolation. 
-#' It may be a sample size (an integer) or a sample coverage 
+#' @param estimator An estimator of richness to evaluate the total number of species.
+#' @param level The level of interpolation or extrapolation.
+#' It may be a sample size (an integer) or a sample coverage
 #' (a number between 0 and 1).
-#' The asymptotic `estimator` is used in extrapolation 
+#' The asymptotic `estimator` is used in extrapolation
 #' (i.e. a `level` greater than the sample size).
 #' @param probability_estimator A string containing one of the possible estimators
-#' of the probability distribution (see [probabilities]). 
+#' of the probability distribution (see [probabilities]).
 #' Used only by the estimator of richness "rarefy".
-#' @param unveiling A string containing one of the possible unveiling methods 
+#' @param unveiling A string containing one of the possible unveiling methods
 #' to estimate the probabilities of the unobserved species (see [probabilities]).
 #' Used only by the estimator of richness "rarefy".
-#' 
+#'
 #' @export
 div_richness.numeric <- function(
-    x, 
+    x,
     estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
-    jack_alpha  = 0.05, 
-    jack_max = 10, 
-    level = NULL, 
+    jack_alpha  = 0.05,
+    jack_max = 10,
+    level = NULL,
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     as_numeric = FALSE,
-    ..., 
+    ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  estimator <- match.arg(estimator)
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
   }
-  estimator <- match.arg(estimator) 
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  coverage_estimator <- match.arg(coverage_estimator)
 
   # Diversity of a vector of probabilities ----
   if (abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
-    if (!is.null(level)) stop("Richness can't be estimated at a level without the abundance of species.")
+    if (!is.null(level)) {
+      cli::cli_abort(
+        "Richness can't be estimated at a level without the abundance of species."
+      )
+    }
     # Probabilities sum to 1, allowing rounding error
     return(
       tibble::tibble_row(
-        estimator = "naive", 
+        estimator = "naive",
         order = 0,
         diversity = sum(x > 0)
       )
     )
   }
-  
+
   # Eliminate 0
   abd <- x[x > 0]
   # Sample size
@@ -123,7 +130,7 @@ div_richness.numeric <- function(
         } else {
           return(
             tibble::tibble_row(
-              estimator = "No Species", 
+              estimator = "No Species",
               order = 0,
               diversity = NA
             )
@@ -135,7 +142,7 @@ div_richness.numeric <- function(
         } else {
           return(
             tibble::tibble_row(
-              estimator = "Single Species", 
+              estimator = "Single Species",
               order = 0,
               diversity = 1
             )
@@ -145,11 +152,14 @@ div_richness.numeric <- function(
     } else {
       # Probabilities instead of abundances
       if (sample_size < 2) {
-        warning("Richness estimators can't apply to probability data. Estimator forced to 'naive'")
+        cli::cli_alert_warning(
+          "Richness estimators can't apply to probability data."
+        )
+        cli::cli_alert("{.code estimator} forced to 'naive.'")
         estimator <- "naive"
       }
     }
-    
+
     ## Naive estimator ----
     if (estimator == "naive") {
       if (as_numeric) {
@@ -157,24 +167,24 @@ div_richness.numeric <- function(
       } else {
         return(
           tibble::tibble_row(
-            estimator = "naive", 
+            estimator = "naive",
             order = 0,
             diversity = s_obs
           )
         )
       }
     }
-    
+
     ## Rarefaction estimator ----
     if (estimator == "rarefy") {
       the_richness <- length(
         probabilities.numeric(
-          abd, 
-          estimator = probability_estimator, 
-          unveiling = unveiling, 
-          richness_estimator = "rarefy", 
+          abd,
+          estimator = probability_estimator,
+          unveiling = unveiling,
+          richness_estimator = "rarefy",
           coverage_estimator = coverage_estimator,
-          q = 0, 
+          q = 0,
           check_arguments = FALSE
         )
       )
@@ -183,20 +193,20 @@ div_richness.numeric <- function(
       } else {
         return(
           tibble::tibble_row(
-            estimator = "rarefy", 
+            estimator = "rarefy",
             order = 0,
             diversity = the_richness
           )
         )
       }
     }
-    
+
     ## Abundance frequency count ----
     abd_freq <- abd_freq_count(abd)
     s_1 <- as.integer(abd_freq[abd_freq[, 1] == 1, 2])
     s_2 <- as.integer(abd_freq[abd_freq[, 1] == 2, 2])
-    
-    
+
+
     ## Chao1 and iChao1 ----
     if ((estimator == "Chao1") | (estimator == "iChao1")) {
       if (is.na(s_1)) {
@@ -217,7 +227,7 @@ div_richness.numeric <- function(
       } else {
         return(
           tibble::tibble_row(
-            estimator = "Chao1", 
+            estimator = "Chao1",
             order = 0,
             diversity = the_richness
           )
@@ -241,14 +251,14 @@ div_richness.numeric <- function(
       } else {
         return(
           tibble::tibble_row(
-            estimator = "iChao1", 
+            estimator = "iChao1",
             order = 0,
             diversity = the_richness
           )
         )
       }
     }
-    
+
     ## jackknife ----
     if (estimator == "jackknife") {
       # Adapted from jackknife in SPECIES
@@ -272,9 +282,9 @@ div_richness.numeric <- function(
           gene[i + 1, 1] <- s_obs
           gene[i + 1, 4] <- s_obs
           for (j in seq_len(i)) {
-            gene[i + 1, 1] <- gene[i + 1, 1] + (-1)^(j + 1) * 
+            gene[i + 1, 1] <- gene[i + 1, 1] + (-1)^(j + 1) *
               2^i * stats::dbinom(j, i, 0.5) * abd_freq[j, 2]
-            gene[i + 1, 4] <- gene[i + 1, 4] + (-1)^(j + 1) * 
+            gene[i + 1, 4] <- gene[i + 1, 4] + (-1)^(j + 1) *
               2^i * stats::dbinom(j, i, 0.5) * abd_freq[j, 2] * prod(seq_len(j))
           }
           gene[i + 1, 2] <- -gene[i + 1, 1]
@@ -289,11 +299,11 @@ div_richness.numeric <- function(
           for (i in 2:k) {
             gene[i, 3] <- -(gene[i + 1, 1] - gene[i, 1])^2/(s_obs - 1)
             for (j in seq_len(i - 1)) {
-              gene[i, 3] <- gene[i, 3] + 
+              gene[i, 3] <- gene[i, 3] +
                 (
-                  (-1)^(j + 1) * 2^(i) * stats::dbinom(j, i, 0.5) - 
+                  (-1)^(j + 1) * 2^(i) * stats::dbinom(j, i, 0.5) -
                   (-1)^(j + 1) * 2^(i - 1) * stats::dbinom(j, i - 1, 0.5)
-                )^2 * 
+                )^2 *
                 abd_freq[j, 2] * s_obs/(s_obs - 1)
             }
             gene[i, 3] <- gene[i, 3] + abd_freq[i, 2] * s_obs/(s_obs - 1)
@@ -305,7 +315,7 @@ div_richness.numeric <- function(
         coe <- stats::qnorm(1 - jack_alpha/2, 0, 1)
         # Which orders pass the test?
         orders <- (gene[2:(k + 1), 5] < coe)
-        if (sum(orders, na.rm=TRUE) == 0) {
+        if (sum(orders, na.rm = TRUE) == 0) {
           # If none, keep the max value of k (+1 because jack1 is in line 2)
           k_smallest <- k + 1
           s_jack <- gene[k_smallest, 1]
@@ -339,9 +349,9 @@ div_richness.numeric <- function(
   # If level is coverage, get size
   if (level < 1) {
     level <- coverage_to_size.numeric(
-      abd, 
-      coverage_estimator = coverage_estimator,
+      abd,
       sample_coverage = level,
+      estimator = coverage_estimator,
       as_numeric = TRUE,
       check_arguments = FALSE
     )
@@ -353,7 +363,7 @@ div_richness.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = "Sample", 
+          estimator = "Sample",
           order = 0,
           level = level,
           diversity = s_obs
@@ -363,7 +373,7 @@ div_richness.numeric <- function(
   }
   if (level <= sample_size) {
     ## Interpolation ----
-    the_richness <- s_obs - 
+    the_richness <- s_obs -
       sum(
         exp(lchoose(sample_size - abd, level) - lchoose(sample_size, level))
       )
@@ -377,7 +387,7 @@ div_richness.numeric <- function(
           level = level,
           diversity = the_richness
         )
-      )  
+      )
     }
   } else {
     ## Extrapolation ----
@@ -387,20 +397,20 @@ div_richness.numeric <- function(
       if (probability_estimator == "naive") {
         # Don't unveil the asymptotic distribution, use the asymptotic estimator
         s_0 <- div_richness.numeric(
-          abd, 
-          estimator=estimator, 
-          jack_alpha = jack_alpha, 
-          jack_max = jack_max, 
+          abd,
+          estimator = estimator,
+          jack_alpha = jack_alpha,
+          jack_max = jack_max,
           as_numeric = TRUE,
           check_arguments = FALSE
         ) - s_obs
       } else {
         # Unveil so that the estimation of richness is similar to that of non-integer entropy
         prob_s_0 <- probabilities.numeric(
-          abd, 
-          estimator = probability_estimator, 
-          unveiling = unveiling, 
-          richness_estimator = estimator, 
+          abd,
+          estimator = probability_estimator,
+          unveiling = unveiling,
+          richness_estimator = estimator,
           jack_alpha  = jack_alpha,
           jack_max = jack_max,
           coverage_estimator = coverage_estimator,
@@ -422,12 +432,12 @@ div_richness.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = estimator, 
+          estimator = estimator,
           order = 0,
           level = level,
           diversity = the_richness
         )
-      )  
+      )
     }
   }
 }
@@ -437,76 +447,84 @@ div_richness.numeric <- function(
 #'
 #' @export
 div_richness.species_distribution <- function(
-    x, 
+    x,
     estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
-    jack_alpha  = 0.05, 
-    jack_max = 10, 
-    level = NULL, 
+    jack_alpha  = 0.05,
+    jack_max = 10,
+    level = NULL,
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     gamma = FALSE,
-    ..., 
+    as_numeric = FALSE,
+    ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  estimator <- match.arg(estimator)
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
   }
-  estimator <- match.arg(estimator) 
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  coverage_estimator <- match.arg(coverage_estimator)
 
   if (gamma) {
     # Calculate gamma entropy of order 0
-    ent_0 <- ent_gamma_hill(
+    ent_0 <- ent_gamma_tsallis(
       species_distribution = x,
       q = 0,
       estimator = estimator,
-      level = level, 
+      level = level,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
       richness_estimator = estimator,
       jack_alpha  = jack_alpha,
       jack_max = jack_max,
       coverage_estimator = coverage_estimator,
-      as_numeric = FALSE
+      as_numeric = as_numeric
     )
     # Calculate diversity
     ent_0 <- dplyr::mutate(
-      ent_0, 
-      diversity = .data$entropy + 1, 
+      ent_0,
+      diversity = .data$entropy + 1,
       .keep = "unused")
     # return the richness
     return(ent_0)
   } else {
     # Apply div_richness.numeric() to each site
-    div_richness_list <- apply(
+    div_richness_sites <- apply(
       # Eliminate site and weight columns
-      x[, !colnames(x) %in% non_species_columns], 
+      x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
       FUN = div_richness.numeric,
       # Arguments
       estimator = estimator,
-      jack_alpha  = jack_alpha, 
-      jack_max = jack_max, 
-      level = level, 
+      jack_alpha  = jack_alpha,
+      jack_max = jack_max,
+      level = level,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
       coverage_estimator = coverage_estimator,
-      as_numeric = FALSE,
+      as_numeric = as_numeric,
       check_arguments = FALSE
     )
-    return(
-      # Make a tibble with site, estimator and richness
-      tibble::tibble(
-        # Restore non-species columns
-        x[colnames(x) %in% non_species_columns],
-        # Coerce the list returned by apply into a dataframe
-        do.call(rbind.data.frame, div_richness_list)
+    if (as_numeric) {
+      the_diversity = div_richness_sites
+    } else {
+        return(
+        # Make a tibble with site, estimator and richness
+        tibble::tibble(
+          # Restore non-species columns
+          x[colnames(x) %in% non_species_columns],
+          # Coerce the list returned by apply into a dataframe
+          do.call(rbind.data.frame, div_richness_sites)
+        )
       )
-    ) 
+    }
   }
 }

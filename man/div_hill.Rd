@@ -20,6 +20,7 @@ div_hill(x, q = 1, ...)
   jack_alpha = 0.05,
   jack_max = 10,
   coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  q_threshold = 10,
   sample_coverage = NULL,
   as_numeric = FALSE,
   ...,
@@ -38,7 +39,9 @@ div_hill(x, q = 1, ...)
   jack_alpha = 0.05,
   jack_max = 10,
   coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  q_threshold = 10,
   gamma = FALSE,
+  as_numeric = FALSE,
   ...,
   check_arguments = TRUE
 )
@@ -47,43 +50,50 @@ div_hill(x, q = 1, ...)
 \item{x}{An object, that may be a numeric vector containing abundances or probabilities,
 or an object of class \link{abundances}  or \link{probabilities}.}
 
-\item{q}{The order of diversity.}
+\item{q}{a number: the order of diversity.}
 
 \item{...}{Unused.}
 
-\item{estimator}{An estimator of asymptotic diversity.}
+\item{estimator}{an estimator of asymptotic diversity.}
 
-\item{level}{The level of interpolation or extrapolation.
+\item{level}{the level of interpolation or extrapolation.
 It may be a sample size (an integer) or a sample coverage
 (a number between 0 and 1).
 If not \code{NULL}, the asymptotic \code{estimator} is ignored.}
 
-\item{probability_estimator}{A string containing one of the possible estimators
+\item{probability_estimator}{a string containing one of the possible estimators
 of the probability distribution (see \link{probabilities}).
 Used only for extrapolation.}
 
-\item{unveiling}{A string containing one of the possible unveiling methods
+\item{unveiling}{a string containing one of the possible unveiling methods
 to estimate the probabilities of the unobserved species (see \link{probabilities}).
 Used only for extrapolation.}
 
-\item{richness_estimator}{An estimator of richness to evaluate the total number of species,
-see \link{div_richness}. Used for interpolation and extrapolation.}
+\item{richness_estimator}{an estimator of richness to evaluate the total number of species,
+see \link{div_richness}. used for interpolation and extrapolation.}
 
-\item{jack_alpha}{The risk level, 5\% by default, used to optimize the jackknife order.}
+\item{jack_alpha}{the risk level, 5\% by default, used to optimize the jackknife order.}
 
-\item{jack_max}{The highest jackknife order allowed. Default is 10.}
+\item{jack_max}{the highest jackknife order allowed. Default is 10.}
 
-\item{coverage_estimator}{An estimator of sample coverage used by \link{coverage}.}
+\item{coverage_estimator}{an estimator of sample coverage used by \link{coverage}.}
 
-\item{sample_coverage}{The sample coverage of \code{x} calculated elsewhere.
+\item{q_threshold}{the value of \code{q} above which diversity is computed
+directly with the naive estimator \eqn{(\sum{p_s^q}^{\frac{1}{(1-q)}}},
+without computing entropy.
+When \code{q} is great, the exponential of entropy goes to \eqn{0^{\frac{1}{(1-q)}}},
+causing rounding errors while the naive estimator of diversity is less and
+less biased.}
+
+\item{sample_coverage}{the sample coverage of \code{x} calculated elsewhere.
 Used to calculate the gamma diversity of meta-communities, see details.}
 
-\item{as_numeric}{If \code{TRUE}, a number or a numeric vector is returned rather than a tibble.}
+\item{as_numeric}{if \code{TRUE}, a number or a numeric vector is returned rather than a tibble.}
 
-\item{check_arguments}{If \code{TRUE}, the function arguments are verified.
+\item{check_arguments}{if \code{TRUE}, the function arguments are verified.
 Should be set to \code{FALSE} to save time when the arguments have been checked elsewhere.}
 
-\item{gamma}{If \code{TRUE}, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.}
+\item{gamma}{if \code{TRUE}, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.}
 }
 \value{
 A tibble with the site names, the estimators used and the estimated diversity.
@@ -104,7 +114,7 @@ which is actually the max value of "ChaoShen" and "Grassberger",
 \insertCite{Zhang2014a;textual}{divent}, \insertCite{Chao2014c;textual}{divent},
 \insertCite{Chao2015;textual}{divent} and \insertCite{Marcon2015a;textual}{divent}.
 
-The \code{ChaoJost} estimator \insertCite{Chao2013,Chao2015;textual}{divent} contains
+The \code{ChaoJost} estimator \insertCite{Chao2013,Chao2015}{divent} contains
 an unbiased part concerning observed species, equal to that of
 \insertCite{Zhang2014a;textual}{divent}, and a (biased) estimator of the remaining
 bias based on the estimation of the species-accumulation curve.
@@ -117,7 +127,7 @@ a geometric distribution of the probabilities of unobserved species.
 The number of unobserved species is estimated by the Chao1 estimator (\code{UnveilC}),
 following \insertCite{Chao2014c;textual}{divent}, or by the iChao1 (\code{UnveiliC})
 or the jackknife (\code{UnveilJ}).
-The \code{UnveilJ} correction often has a lower bias but a greater variance
+The \code{UnveilJ} estimator often has a lower bias but a greater variance
 \insertCite{Marcon2015a}{divent}.
 It is a good first choice thanks to the versatility of the jackknife
 estimator of richness.
@@ -130,7 +140,7 @@ To estimate \eqn{\gamma} diversity, the size of a metacommunity (see
 not ensure that its abundances are integer values.
 Then, classical bias-correction methods do not apply.
 Providing the \code{sample_coverage} argument allows applying the \code{ChaoShen} and
-\code{Grassberger} corrections to estimate quite well the entropy.
+\code{Grassberger} estimators to estimate quite well the entropy.
 
 Diversity can be estimated at a specified level of interpolation or
 extrapolation, either a chosen sample size or sample coverage

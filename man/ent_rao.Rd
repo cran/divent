@@ -26,31 +26,33 @@ ent_rao(x, ...)
   normalize = TRUE,
   estimator = c("Lande", "naive"),
   gamma = FALSE,
+  as_numeric = FALSE,
   ...,
   check_arguments = TRUE
 )
 }
 \arguments{
-\item{x}{An object, that may be a numeric vector containing abundances or probabilities,
+\item{x}{An object, that may be a named numeric vector (names are species names)
+containing abundances or probabilities,
 or an object of class \link{abundances} or \link{probabilities}.}
 
 \item{...}{Unused.}
 
-\item{distances}{A distance matrix or an object of class \link[stats:dist]{stats::dist}}
+\item{distances}{a distance matrix or an object of class \link[stats:dist]{stats::dist}.}
 
-\item{tree}{An ultrametric, phylogenetic tree.
+\item{tree}{an ultrametric, phylogenetic tree.
 May be an object of class \link{phylo_divent}, \link[ape:read.tree]{ape::phylo}, \link[ade4:phylog]{ade4::phylog} or \link[stats:hclust]{stats::hclust}.}
 
-\item{normalize}{If \code{TRUE}, phylogenetic is normalized: the height of the tree is set to 1.}
+\item{normalize}{if \code{TRUE}, phylogenetic is normalized: the height of the tree is set to 1.}
 
 \item{estimator}{An estimator of entropy.}
 
-\item{as_numeric}{If \code{TRUE}, a number or a numeric vector is returned rather than a tibble.}
+\item{as_numeric}{if \code{TRUE}, a number or a numeric vector is returned rather than a tibble.}
 
-\item{check_arguments}{If \code{TRUE}, the function arguments are verified.
+\item{check_arguments}{if \code{TRUE}, the function arguments are verified.
 Should be set to \code{FALSE} to save time when the arguments have been checked elsewhere.}
 
-\item{gamma}{If \code{TRUE}, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.}
+\item{gamma}{if \code{TRUE}, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.}
 }
 \value{
 A tibble with the site names, the estimators used and the estimated entropy.
@@ -75,7 +77,7 @@ Then, the order of species is assumed to be the same as that of the
 \examples{
 # Entropy of each community
 ent_rao(paracou_6_abd, tree = paracou_6_taxo)
-# Similar to (but estimators are not the same) 
+# Similar to (but estimators are not the same)
 ent_phylo(paracou_6_abd, tree = paracou_6_taxo, q = 2)
 
 # Functional entropy

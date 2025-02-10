@@ -1,12 +1,12 @@
 #' Hurlbert Entropy of a Community
-#' 
+#'
 #' Estimate the Hurlbert entropy \insertCite{Hurlbert1971}{divent} of species from abundance or probability data.
 #' Several estimators are available to deal with incomplete sampling.
-#' 
-#' Bias correction requires the number of individuals. 
+#'
+#' Bias correction requires the number of individuals.
 #' See [div_hurlbert] for estimators.
-#' 
-#' Hurlbert's entropy cannot be estimated at a specified level of interpolation or 
+#'
+#' Hurlbert's entropy cannot be estimated at a specified level of interpolation or
 #' extrapolation, and entropy partitioning is not available.
 #'
 #' @inheritParams check_divent_args
@@ -14,15 +14,17 @@
 #' or an object of class [abundances] or [probabilities].
 #' @param ... Unused.
 #'
-#' @return A tibble with the site names, the estimators used and the estimated entropy.
+#' @returns A tibble with the site names, the estimators used and the estimated entropy.
+#'
+#' @seealso [div_hurlbert]
 #'
 #' @references
 #' \insertAllCited{}
-#' 
+#'
 #' @examples
 #' # Entropy of each community
 #' ent_hurlbert(paracou_6_abd, k = 2)
-#' 
+#'
 #' @name ent_hurlbert
 NULL
 
@@ -37,22 +39,25 @@ ent_hurlbert <- function(x, k = 2, ...) {
 
 #' @rdname ent_hurlbert
 #'
-#' @param estimator An estimator of entropy. 
-#' 
+#' @param estimator An estimator of entropy.
+#'
 #' @export
 ent_hurlbert.numeric <- function(
-    x, 
-    k = 2, 
+    x,
+    k = 2,
     estimator = c("Hurlbert", "naive"),
     as_numeric = FALSE,
     ...,
     check_arguments = TRUE) {
 
+  # Check arguments
+  estimator <- match.arg(estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
   }
-  estimator <- match.arg(estimator) 
 
   # Entropy of a vector of probabilities ----
   if (abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
@@ -62,27 +67,30 @@ ent_hurlbert.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = "naive", 
+          estimator = "naive",
           order = k,
           entropy = the_entropy
         )
-      )  
+      )
     }
   }
-  
+
   # Eliminate 0
   abd <- x[x > 0]
   # Sample size
   sample_size <- sum(abd)
   if (k > sample_size) {
-    stop("The order of diversity cannot be greater than the size of the sample.")
+    cli::cli_abort(
+      "The order of diversity cannot be greater than the size of the sample."
+    )
   }
   # Number of observed species
   s_obs <- length(abd)
-  
+
   # Entropy of a vector of abundances ----
   if (!is_integer_values(abd)) {
-    warning("The estimator can't be applied to non-integer values.")
+    cli::cli_alert_warning("The estimator can't be applied to non-integer values.")
+    cli::cli_alert("{.code estimator} forced to 'naive.'")
     estimator <- "naive"
   }
   # Naive estimator
@@ -94,11 +102,11 @@ ent_hurlbert.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = "naive", 
+          estimator = "naive",
           order = k,
           entropy = the_entropy
         )
-      )  
+      )
     }
   }
   # Hurlbert estimator
@@ -111,7 +119,7 @@ ent_hurlbert.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = "Hurlbert", 
+          estimator = "Hurlbert",
           order = k,
           entropy = the_entropy
         )
@@ -119,47 +127,56 @@ ent_hurlbert.numeric <- function(
     }
   }
 
-  warning("estimator was not recognized")
-  return (NA)
+  cli::cli_alert_warning("estimator was not recognized")
+  return(NA)
 }
-  
+
 
 
 #' @rdname ent_hurlbert
 #'
 #' @export
 ent_hurlbert.species_distribution <- function(
-    x, 
-    k = 2, 
+    x,
+    k = 2,
     estimator = c("Hurlbert", "naive"),
+    as_numeric = FALSE,
     ...,
     check_arguments = TRUE) {
 
+  # Check arguments
+  estimator <- match.arg(estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
   }
-  estimator <- match.arg(estimator) 
 
   # Apply ent_hurlbert.numeric() to each site
-  ent_hurlbert_list <- apply(
+  ent_hurlbert_sites <- apply(
     # Eliminate site and weight columns
-    x[, !colnames(x) %in% non_species_columns], 
+    x[, !colnames(x) %in% non_species_columns],
     # Apply to each row
     MARGIN = 1,
     FUN = ent_hurlbert.numeric,
     # Arguments
     k = k,
     estimator = estimator,
+    as_numeric = as_numeric,
     check_arguments = FALSE
   )
-  return(
-    # Make a tibble with site, estimator and entropy
-    tibble::tibble(
-      # Restore non-species columns
-      x[colnames(x) %in% non_species_columns],
-      # Coerce the list returned by apply into a dataframe
-      do.call(rbind.data.frame, ent_hurlbert_list)
+  if (as_numeric) {
+    return(ent_hurlbert_sites)
+  } else {
+    return(
+      # Make a tibble with site, estimator and entropy
+      tibble::tibble(
+        # Restore non-species columns
+        x[colnames(x) %in% non_species_columns],
+        # Coerce the list returned by apply into a dataframe
+        do.call(rbind.data.frame, ent_hurlbert_sites)
+      )
     )
-  )
+  }
 }

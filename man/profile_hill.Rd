@@ -20,6 +20,7 @@ profile_hill(x, orders = seq(from = 0, to = 2, by = 0.1), ...)
   jack_alpha = 0.05,
   jack_max = 10,
   coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  q_threshold = 10,
   sample_coverage = NULL,
   as_numeric = FALSE,
   n_simulations = 0,
@@ -42,6 +43,7 @@ profile_hill(x, orders = seq(from = 0, to = 2, by = 0.1), ...)
   jack_alpha = 0.05,
   jack_max = 10,
   coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  q_threshold = 10,
   gamma = FALSE,
   n_simulations = 0,
   alpha = 0.05,
@@ -61,38 +63,45 @@ or an object of class \link{abundances} or \link{probabilities}.}
 
 \item{estimator}{An estimator of entropy.}
 
-\item{level}{The level of interpolation or extrapolation.
+\item{level}{the level of interpolation or extrapolation.
 It may be a sample size (an integer) or a sample coverage
 (a number between 0 and 1).
 If not \code{NULL}, the asymptotic \code{estimator} is ignored.}
 
-\item{probability_estimator}{A string containing one of the possible estimators
+\item{probability_estimator}{a string containing one of the possible estimators
 of the probability distribution (see \link{probabilities}).
 Used only for extrapolation.}
 
-\item{unveiling}{A string containing one of the possible unveiling methods
+\item{unveiling}{a string containing one of the possible unveiling methods
 to estimate the probabilities of the unobserved species (see \link{probabilities}).
 Used only for extrapolation.}
 
-\item{richness_estimator}{An estimator of richness to evaluate the total number of species,
-see \link{div_richness}. Used for interpolation and extrapolation.}
+\item{richness_estimator}{an estimator of richness to evaluate the total number of species,
+see \link{div_richness}. used for interpolation and extrapolation.}
 
-\item{jack_alpha}{The risk level, 5\% by default, used to optimize the jackknife order.}
+\item{jack_alpha}{the risk level, 5\% by default, used to optimize the jackknife order.}
 
-\item{jack_max}{The highest jackknife order allowed. Default is 10.}
+\item{jack_max}{the highest jackknife order allowed. Default is 10.}
 
-\item{coverage_estimator}{An estimator of sample coverage used by \link{coverage}.}
+\item{coverage_estimator}{an estimator of sample coverage used by \link{coverage}.}
 
-\item{sample_coverage}{The sample coverage of \code{x} calculated elsewhere.
+\item{q_threshold}{the value of \code{q} above which diversity is computed
+directly with the naive estimator \eqn{(\sum{p_s^q}^{\frac{1}{(1-q)}}},
+without computing entropy.
+When \code{q} is great, the exponential of entropy goes to \eqn{0^{\frac{1}{(1-q)}}},
+causing rounding errors while the naive estimator of diversity is less and
+less biased.}
+
+\item{sample_coverage}{the sample coverage of \code{x} calculated elsewhere.
 Used to calculate the gamma diversity of meta-communities, see details.}
 
-\item{as_numeric}{If \code{TRUE}, a number or a numeric vector is returned rather than a tibble.}
+\item{as_numeric}{if \code{TRUE}, a number or a numeric vector is returned rather than a tibble.}
 
 \item{n_simulations}{The number of simulations used to estimate the confidence envelope of the profile.}
 
 \item{alpha}{The risk level, 5\% by default, of the confidence envelope of the profile.}
 
-\item{bootstrap}{The method used to obtain the probabilities to generate
+\item{bootstrap}{the method used to obtain the probabilities to generate
 bootstrapped communities from observed abundances.
 If "Marcon2012", the probabilities are simply the abundances divided by the total
 number of individuals \insertCite{Marcon2012a}{divent}.
@@ -100,12 +109,12 @@ If "Chao2013" or "Chao2015" (by default), a more sophisticated approach is used
 (see \link{as_probabilities}) following \insertCite{Chao2013;textual}{divent} or
 \insertCite{Chao2015;textual}{divent}.}
 
-\item{show_progress}{If TRUE, a progress bar is shown during long computations.}
+\item{show_progress}{if TRUE, a progress bar is shown during long computations.}
 
-\item{check_arguments}{If \code{TRUE}, the function arguments are verified.
+\item{check_arguments}{if \code{TRUE}, the function arguments are verified.
 Should be set to \code{FALSE} to save time when the arguments have been checked elsewhere.}
 
-\item{gamma}{If \code{TRUE}, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.}
+\item{gamma}{if \code{TRUE}, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.}
 }
 \value{
 A tibble with the site names, the estimators used and the estimated diversity at each order.

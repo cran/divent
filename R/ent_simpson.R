@@ -1,16 +1,16 @@
 #' Simpson's Entropy of a Community
-#' 
+#'
 #' Estimate the entropy \insertCite{Simpson1949}{divent} of species from abundance
 #' or probability data.
 #' Several estimators are available to deal with incomplete sampling.
-#' 
-#' Bias correction requires the number of individuals. 
+#'
+#' Bias correction requires the number of individuals.
 #' See [div_hill] for non-specific estimators.
-#' 
+#'
 #' Simpson-specific estimator is from \insertCite{Lande1996;textual}{divent}.
-#' 
-#' Entropy can be estimated at a specified level of interpolation or 
-#' extrapolation, either a chosen sample size or sample coverage 
+#'
+#' Entropy can be estimated at a specified level of interpolation or
+#' extrapolation, either a chosen sample size or sample coverage
 #' \insertCite{Chao2014}{divent}, rather than its asymptotic value.
 #' See [accum_tsallis] for details.
 #'
@@ -19,20 +19,20 @@
 #' or an object of class [abundances] or [probabilities].
 #' @param ... Unused.
 #'
-#' @return A tibble with the site names, the estimators used and the estimated entropy.
+#' @returns A tibble with the site names, the estimators used and the estimated entropy.
 #'
 #' @references
 #' \insertAllCited{}
-#' 
+#'
 #' @examples
 #' # Entropy of each community
 #' ent_simpson(paracou_6_abd)
 #' # gamma entropy
 #' ent_simpson(paracou_6_abd, gamma = TRUE)
-#' 
+#'
 #' # At 80% coverage
 #' ent_simpson(paracou_6_abd, level = 0.8)
-#' 
+#'
 #' @name ent_simpson
 NULL
 
@@ -48,38 +48,45 @@ ent_simpson <- function(x, ...) {
 #' @rdname ent_simpson
 #'
 #' @param estimator An estimator of entropy.
-#' 
+#'
 #' @export
 ent_simpson.numeric <- function(
-    x, 
+    x,
     estimator = c("Lande",
-                  "UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger", 
+                  "UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger",
                   "Marcon", "UnveilC", "UnveiliC", "ZhangGrabchak", "naive",
                   "Bonachela", "Holste"),
-    level = NULL, 
+    level = NULL,
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     as_numeric  = FALSE,
     ...,
     check_arguments = TRUE) {
 
+  # Check arguments
+  estimator <- match.arg(estimator)
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
   }
-  estimator <- match.arg(estimator) 
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator)
 
   # Entropy of a vector of probabilities ----
   if (abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
-    if (!is.null(level)) stop("Entropy can't be estimated at a level without the abundance of species.")
+    if (!is.null(level)) {
+      cli::cli_abort(
+        "Entropy can't be estimated at a level without the abundance of species."
+      )
+    }
     # Probabilities sum to 1, allowing rounding error
     the_entropy <- 1 - sum(x^2)
     if (as_numeric) {
@@ -87,14 +94,14 @@ ent_simpson.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = "naive", 
+          estimator = "naive",
           order = 2,
           entropy = the_entropy
         )
-      )  
+      )
     }
   }
-  
+
   # Eliminate 0
   abd <- x[x > 0]
   # Sample size
@@ -110,11 +117,11 @@ ent_simpson.numeric <- function(
         } else {
           return(
             tibble::tibble_row(
-              estimator = "No Species", 
+              estimator = "No Species",
               order = 2,
               entropy = NA
             )
-          )  
+          )
         }
       } else {
         if (as_numeric) {
@@ -122,21 +129,24 @@ ent_simpson.numeric <- function(
         } else {
           return(
             tibble::tibble_row(
-              estimator = "Single Species", 
+              estimator = "Single Species",
               order = 2,
               entropy = 0
             )
-          )  
+          )
         }
       }
     } else {
       # Probabilities instead of abundances
       if (sample_size < 2) {
-        warning("Entropy estimators can't apply to probability data. Estimator forced to 'naive'")
+        cli::cli_alert_warning(
+          "Entropy estimators can't apply to probability data.",
+        )
+        cli::cli_alert("{.code estimator} forced to 'naive'.")
         estimator <- "naive"
       }
     }
-    
+
     if (estimator == "Lande") {
       # Lande's estimator ----
       the_entropy <- 1 - sum(abd * (abd - 1) / sample_size / (sample_size - 1))
@@ -145,24 +155,24 @@ ent_simpson.numeric <- function(
       } else {
         return(
           tibble::tibble_row(
-            estimator = estimator, 
+            estimator = estimator,
             order = 2,
             entropy = the_entropy
           )
-        )  
-      }     
+        )
+      }
     } else {
       ## Tsallis entropy if estimator != "Lande" ----
       return(
         ent_tsallis(
           abd,
-          q = 2, 
+          q = 2,
           estimator = estimator,
-          level = NULL, 
+          level = NULL,
           probability_estimator = probability_estimator,
           unveiling = unveiling,
           richness_estimator = richness_estimator,
-          jack_alpha  = jack_alpha, 
+          jack_alpha  = jack_alpha,
           jack_max = jack_max,
           coverage_estimator = coverage_estimator,
           as_numeric = as_numeric,
@@ -176,7 +186,7 @@ ent_simpson.numeric <- function(
   # If level is coverage, get size
   if (level < 1) {
     level <- coverage_to_size.numeric(
-      abd, 
+      abd,
       sample_coverage = level,
       estimator = coverage_estimator,
       as_numeric = TRUE,
@@ -191,28 +201,28 @@ ent_simpson.numeric <- function(
     } else {
       return(
         tibble::tibble_row(
-          estimator = "Sample", 
+          estimator = "Sample",
           order = 2,
           level = level,
           entropy = the_entropy
         )
-      )  
+      )
     }
   }
   ## Valid interpolation and extrapolation ----
-  the_entropy <- 1 - 1 / level - 
+  the_entropy <- 1 - 1 / level -
     (1 - 1 / level) * sum(abd * (abd - 1)) / sample_size / (sample_size - 1)
   if (as_numeric) {
     return(the_entropy)
   } else {
     return(
       tibble::tibble_row(
-        estimator = "Chao2014", 
+        estimator = "Chao2014",
         order = 2,
         level = level,
         entropy = the_entropy
       )
-    )  
+    )
   }
 }
 
@@ -223,74 +233,82 @@ ent_simpson.numeric <- function(
 ent_simpson.species_distribution <- function(
     x,
     estimator = c("Lande",
-                  "UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger", 
+                  "UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger",
                   "Marcon", "UnveilC", "UnveiliC", "ZhangGrabchak", "naive",
                   "Bonachela", "Holste"),
-    level = NULL, 
+    level = NULL,
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     gamma = FALSE,
+    as_numeric = FALSE,
     ...,
     check_arguments = TRUE) {
 
+  # Check arguments
+  estimator <- match.arg(estimator)
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
   }
-  estimator <- match.arg(estimator) 
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator)
 
   if (gamma) {
     return(
-      ent_gamma_hill(
+      ent_gamma_tsallis(
         species_distribution = x,
         q = 2,
         estimator = estimator,
-        level = level, 
+        level = level,
         probability_estimator = probability_estimator,
         unveiling = unveiling,
         richness_estimator = richness_estimator,
         jack_alpha  = jack_alpha,
         jack_max = jack_max,
         coverage_estimator = coverage_estimator,
-        as_numeric = FALSE
+        as_numeric = as_numeric
       )
     )
   } else {
     # Apply ent_simpson.numeric() to each site
-    ent_simpson_list <- apply(
+    ent_simpson_sites <- apply(
       # Eliminate site and weight columns
-      x[, !colnames(x) %in% non_species_columns], 
+      x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
       FUN = ent_simpson.numeric,
       # Arguments
       estimator = estimator,
-      level = level, 
+      level = level,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
       richness_estimator = richness_estimator,
-      jack_alpha  = jack_alpha, 
-      jack_max = jack_max, 
+      jack_alpha  = jack_alpha,
+      jack_max = jack_max,
       coverage_estimator = coverage_estimator,
-      as_numeric = FALSE,
+      as_numeric = as_numeric,
       check_arguments = FALSE
     )
-    return(
-      # Make a tibble with site, estimator and richness
-      tibble::tibble(
-        # Restore non-species columns
-        x[colnames(x) %in% non_species_columns],
-        # Coerce the list returned by apply into a dataframe
-        do.call(rbind.data.frame, ent_simpson_list)
+    if (as_numeric) {
+      return(ent_simpson_sites)
+    } else {
+      return(
+        # Make a tibble with site, estimator and richness
+        tibble::tibble(
+          # Restore non-species columns
+          x[colnames(x) %in% non_species_columns],
+          # Coerce the list returned by apply into a dataframe
+          do.call(rbind.data.frame, ent_simpson_sites)
+        )
       )
-    )
+    }
   }
 }

@@ -1,37 +1,38 @@
 #' Phylogenetic Diversity of a Community
-#' 
+#'
 #' Estimate the diversity of species from abundance or probability data
 #' and a phylogenetic tree.
 #' Several estimators are available to deal with incomplete sampling.
-#' 
-#' Bias correction requires the number of individuals. 
+#'
+#' Bias correction requires the number of individuals.
 #' See [div_hill] for estimators.
-#' 
-#' Entropy can be estimated at a specified level of interpolation or 
-#' extrapolation, either a chosen sample size or sample coverage 
+#'
+#' Entropy can be estimated at a specified level of interpolation or
+#' extrapolation, either a chosen sample size or sample coverage
 #' \insertCite{Chao2014}{divent}, rather than its asymptotic value.
 #' See [accum_tsallis] for details.
 #'
 #' @inheritParams check_divent_args
-#' @param x An object, that may be a numeric vector containing abundances 
-#' or probabilities, or an object of class [abundances] or [probabilities].
+#' @param x An object, that may be a named numeric vector (names are species names)
+#' containing abundances or probabilities,
+#' or an object of class [abundances] or [probabilities].
 #' @param ... Unused.
 #'
-#' @return A tibble with the site names, the estimators used and the estimated 
+#' @returns A tibble with the site names, the estimators used and the estimated
 #' diversity
 #'
 #' @references
 #' \insertAllCited{}
-#' 
+#'
 #' @examples
 #' div_phylo(paracou_6_abd, tree = paracou_6_taxo, q = 2)
-#' 
+#'
 #' # At 80% coverage
 #' div_phylo(paracou_6_abd, tree = paracou_6_taxo, q = 2, level = 0.8)
-#' 
+#'
 #' # Gamma entropy
 #' div_phylo(paracou_6_abd, tree = paracou_6_taxo, q = 2, gamma = TRUE)
-#' 
+#'
 #' @name div_phylo
 NULL
 
@@ -47,56 +48,59 @@ div_phylo <- function(x, tree, q = 1, ...) {
 #' @rdname div_phylo
 #'
 #' @param estimator An estimator of asymptotic diversity.
-#' 
+#'
 #' @export
 div_phylo.numeric <- function(
-    x, 
+    x,
     tree,
-    q = 1, 
+    q = 1,
     normalize = TRUE,
-    estimator = c("UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger", 
+    estimator = c("UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger",
                   "Marcon", "UnveilC", "UnveiliC", "ZhangGrabchak", "naive",
                   "Bonachela", "Holste"),
-    level = NULL, 
+    level = NULL,
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     as_numeric = FALSE,
     ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  estimator <- match.arg(estimator)
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
     # Prepare the tree
     tree <- as_phylo_divent(tree)
     # Check species names
-    col_names <- colnames(x)
+    col_names <- names(x)
     species_names <- col_names[!col_names %in% non_species_columns]
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
-      stop("Some species are missing in the tree.")    
+      cli::cli_abort("Some species are missing in the tree.")
     }
   }
-  estimator <- match.arg(estimator) 
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator)
 
   the_entropy <- ent_phylo.numeric(
-    x, 
+    x,
     tree = tree,
-    q = q, 
+    q = q,
     normalize = normalize,
     estimator = estimator,
-    level = level, 
+    level = level,
     probability_estimator = probability_estimator,
     unveiling = unveiling,
     richness_estimator = richness_estimator,
-    jack_alpha  = jack_alpha, 
+    jack_alpha  = jack_alpha,
     jack_max = jack_max,
     coverage_estimator = coverage_estimator,
     as_numeric = FALSE,
@@ -104,12 +108,16 @@ div_phylo.numeric <- function(
   )
   # Calculate diversity
   the_diversity <- dplyr::mutate(
-    the_entropy, 
+    the_entropy,
     diversity = exp_q(.data$entropy, q = q),
     .keep = "unused"
   )
-  # return the diversity
-  return(the_diversity)
+  # Return the diversity
+  if (as_numeric) {
+    return(the_diversity$diversity)
+  } else {
+    return(the_diversity)
+  }
 }
 
 
@@ -117,41 +125,45 @@ div_phylo.numeric <- function(
 #'
 #' @export
 div_phylo.species_distribution <- function(
-    x, 
+    x,
     tree,
-    q = 1, 
+    q = 1,
     normalize = TRUE,
-    estimator = c("UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger", 
+    estimator = c("UnveilJ", "ChaoJost", "ChaoShen", "GenCov", "Grassberger",
                   "Marcon", "UnveilC", "UnveiliC", "ZhangGrabchak", "naive",
                   "Bonachela", "Holste"),
-    level = NULL, 
+    level = NULL,
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     gamma = FALSE,
+    as_numeric = FALSE,
     ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  estimator <- match.arg(estimator)
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
     # Prepare the tree
     tree <- as_phylo_divent(tree)
     # Check species names
     col_names <- colnames(x)
     species_names <- col_names[!col_names %in% non_species_columns]
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
-      stop("Some species are missing in the tree.")    
+      cli::cli_abort("Some species are missing in the tree.")
     }
   }
-  estimator <- match.arg(estimator) 
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator)
 
   the_entropy <- ent_phylo.species_distribution(
     x,
@@ -159,7 +171,7 @@ div_phylo.species_distribution <- function(
     normalize = TRUE,
     q = q,
     estimator = estimator,
-    level = level, 
+    level = level,
     probability_estimator = probability_estimator,
     unveiling = unveiling,
     richness_estimator = richness_estimator,
@@ -167,14 +179,20 @@ div_phylo.species_distribution <- function(
     jack_max = jack_max,
     coverage_estimator = coverage_estimator,
     gamma = gamma,
+    as_numeric = FALSE,
     check_arguments = FALSE
   )
   # Calculate diversity
   the_diversity <- dplyr::mutate(
-    the_entropy, 
+    the_entropy,
     diversity = exp_q(.data$entropy, q = q),
     .keep = "unused"
   )
 
-  return(the_diversity)
+  # Return the diversity
+  if (as_numeric) {
+    return(the_diversity$diversity)
+  } else {
+    return(the_diversity)
+  }
 }

@@ -1,24 +1,24 @@
 #' Phylogenetic Diversity Accumulation of a Community
-#' 
-#' Diversity and Entropy Accumulation Curves represent the accumulation of 
+#'
+#' Diversity and Entropy Accumulation Curves represent the accumulation of
 #' entropy with respect to the sample size.
-#' 
-#' `accum_ent_phylo()` or `accum_div_phylo()` estimate the phylogenetic 
+#'
+#' `accum_ent_phylo()` or `accum_div_phylo()` estimate the phylogenetic
 #' diversity or entropy accumulation curve of a distribution.
 #' See [ent_tsallis] for details about the computation of entropy at each level
 #' of interpolation and extrapolation.
-#' 
-#' In accumulation curves, extrapolation if done by estimating the asymptotic 
-#' distribution of the community and estimating entropy at different levels 
-#' by interpolation. 
-#' 
-#' Interpolation and extrapolation of integer orders of diversity are from 
+#'
+#' In accumulation curves, extrapolation if done by estimating the asymptotic
+#' distribution of the community and estimating entropy at different levels
+#' by interpolation.
+#'
+#' Interpolation and extrapolation of integer orders of diversity are from
 #' \insertCite{Chao2014;textual}{divent}.
-#' The asymptotic richness is adjusted so that the extrapolated part of the 
+#' The asymptotic richness is adjusted so that the extrapolated part of the
 #' accumulation joins the observed value at the sample size.
-#' 
+#'
 #' "accumulation" objects can be plotted.
-#' They generalize the classical Species Accumulation Curves (SAC) which are 
+#' They generalize the classical Species Accumulation Curves (SAC) which are
 #' diversity accumulation of order \eqn{q=0}.
 #'
 #' @inheritParams check_divent_args
@@ -26,19 +26,19 @@
 #' or an object of class [abundances]  or [probabilities].
 #' @param ... Unused.
 #'
-#' @return A tibble with the site names, the estimators used and the accumulated entropy
+#' @returns A tibble with the site names, the estimators used and the accumulated entropy
 #' or diversity at each level of sampling effort.
 #'
 #' @references
 #' \insertAllCited{}
-#' 
+#'
 #' @examples
-#' # Richness accumulation up to the sample size. 
+#' # Richness accumulation up to the sample size.
 #' # 100 simulations only to save time.
 #' autoplot(
 #'   accum_div_phylo(mock_3sp_abd, tree = mock_3sp_tree, n_simulations = 100)
 #' )
-#' 
+#'
 #' @name accum_div_phylo
 NULL
 
@@ -53,20 +53,20 @@ accum_ent_phylo <- function(x, ...) {
 
 #' @rdname accum_div_phylo
 #'
-#' @param levels The levels, i.e. the sample sizes of interpolation or 
+#' @param levels The levels, i.e. the sample sizes of interpolation or
 #' extrapolation: a vector of integer values.
-#' 
+#'
 #' @export
 accum_ent_phylo.numeric <- function(
     x,
     tree,
     q = 0,
     normalize = TRUE,
-    levels = NULL, 
+    levels = NULL,
     probability_estimator = c("Chao2015", "Chao2013","ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     n_simulations = 0,
@@ -74,17 +74,24 @@ accum_ent_phylo.numeric <- function(
     show_progress = TRUE,
     ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
     # Prepare the tree
     tree <- as_phylo_divent(tree)
     # Check species names
     col_names <- colnames(x)
     species_names <- col_names[!col_names %in% non_species_columns]
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
-      stop("Some species are missing in the tree.")    
+      cli::cli_abort("Some species are missing in the tree.")
     }
     # Set levels if needed
     if (is.null(levels)) {
@@ -92,25 +99,21 @@ accum_ent_phylo.numeric <- function(
       levels <- seq_len(sample_size)
     }
   }
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator) 
- 
+
   # Make a species_distribution
-  species_distribution <- as_species_distribution(x)
-  
+  the_species_distribution <- as_species_distribution(x)
+
   # Entropy accumulation
   the_entropy <- accum_ent_phylo.abundances(
-    x = species_distribution,
+    x = the_species_distribution,
     tree = tree,
     q = q,
     normalize = normalize,
-    levels = levels, 
+    levels = levels,
     probability_estimator = probability_estimator,
     unveiling = unveiling,
     richness_estimator = richness_estimator,
-    jack_alpha  = jack_alpha, 
+    jack_alpha  = jack_alpha,
     jack_max = jack_max,
     coverage_estimator = coverage_estimator,
     gamma = FALSE,
@@ -133,11 +136,11 @@ accum_ent_phylo.abundances <- function(
     tree,
     q = 0,
     normalize = TRUE,
-    levels = NULL, 
+    levels = NULL,
     probability_estimator = c("Chao2015", "Chao2013","ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     gamma = FALSE,
@@ -146,19 +149,22 @@ accum_ent_phylo.abundances <- function(
     show_progress = TRUE,
     ...,
     check_arguments = TRUE) {
-  
-  # Species names
-  col_names <- colnames(x)
-  species_names <- col_names[!col_names %in% non_species_columns]
+
   # Check arguments
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
     # Prepare the tree
     tree <- as_phylo_divent(tree)
     # Check species names
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
-      stop("Some species are missing in the tree.")    
+      cli::cli_abort("Some species are missing in the tree.")
     }
     # Set levels if needed
     if (is.null(levels)) {
@@ -170,21 +176,21 @@ accum_ent_phylo.abundances <- function(
       levels <- seq_len(sample_size)
     }
   }
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator) 
-  
+
+  # Species names
+  col_names <- colnames(x)
+  species_names <- col_names[!col_names %in% non_species_columns]
+
   # Calculate abundances along the tree, that are a list of matrices
   if (gamma) {
     the_phylo_abd <- phylo_abd(abundances = metacommunity(x), tree = tree)
   } else {
     the_phylo_abd <- phylo_abd(abundances = x, tree = tree)
   }
-  
+
   # Prepare arrays to store entropy (3 dimensions: x, y, z)
   # and simulated entropies (4 dimensions : x, y, z, t)
-  # x are tree intervals, y are communities, z are levels, 
+  # x are tree intervals, y are communities, z are levels,
   # t are simulations.
   # Add an array to store simulation envelopes, where
   # t are quantiles of simulations, inf and sup.
@@ -206,13 +212,11 @@ accum_ent_phylo.abundances <- function(
   }
   # Prepare the progress bar
   if (show_progress & interactive()) {
-    pgb <- utils::txtProgressBar(
-      min = 0, 
-      max = 1 + (length(the_phylo_abd) * n_communities) * (1 + n_simulations)
-    )
-    utils::setTxtProgressBar(pgb, 1)
+    cli::cli_progress_bar(
+      "Computing entropy",
+      total = (length(the_phylo_abd) * n_communities) * (1 + n_simulations))
   }
-  
+
   # Calculate entropy along the tree
   for (x_interval in seq_along(the_phylo_abd)) {
     if (n_simulations > 0) {
@@ -233,7 +237,13 @@ accum_ent_phylo.abundances <- function(
       # Prepare an array to store simulated abd. Rows are species, columns are
       # communities (same structure as groups of the_phylo_abd), z are simulations
       # Max number of species in simulated communities
-      sp_sim <- max(vapply(comm_sim.list, dim, c(0L,0L))[2,])
+      sp_sim <- max(
+        vapply(
+          comm_sim.list,
+          FUN = dim,
+          FUN.VALUE = c(0L, 0L)
+        )[2, ]
+      )
       comm_sim <- array(
         data = 0,
         dim = c(sp_sim, length(comm_sim.list), n_simulations)
@@ -241,7 +251,7 @@ accum_ent_phylo.abundances <- function(
       # Move the simulations from the list to the array
       for (simulation in seq_len(n_simulations)) {
         for (community in seq_along(comm_sim.list)) {
-          # Number of species in the simulation 
+          # Number of species in the simulation
           # (= number of columns - 2 for site and weight)
           sp_sim <- dim(comm_sim.list[[community]])[2] - 2
           # Pick a simulation. Store simulated species, let extra cols = 0
@@ -252,18 +262,18 @@ accum_ent_phylo.abundances <- function(
         }
       }
     }
-    
+
     for (y_community in seq_len(n_communities)) {
       # Calculate the profile of each community
       # Actual data
       ent_phylo_abd[x_interval, y_community, ] <- accum_tsallis.numeric(
-        x = the_phylo_abd[[x_interval]][, y_community], 
+        x = the_phylo_abd[[x_interval]][, y_community],
         q = q,
-        levels = levels, 
+        levels = levels,
         probability_estimator = probability_estimator,
         unveiling = unveiling,
         richness_estimator = richness_estimator,
-        jack_alpha = jack_alpha, 
+        jack_alpha = jack_alpha,
         jack_max = jack_max,
         coverage_estimator = coverage_estimator,
         n_simulations = 0,
@@ -271,17 +281,17 @@ accum_ent_phylo.abundances <- function(
         show_progress = FALSE,
         check_arguments = FALSE
       )$entropy
-      
+
       for (t_simulation in seq_len(n_simulations)) {
         # Entropy of simulated communities
         ent_phylo_sim[x_interval, y_community, , t_simulation] <- accum_tsallis.numeric(
           x = comm_sim[, y_community, t_simulation],
           q = q,
-          levels = levels, 
+          levels = levels,
           probability_estimator = probability_estimator,
           unveiling = unveiling,
           richness_estimator = richness_estimator,
-          jack_alpha = jack_alpha, 
+          jack_alpha = jack_alpha,
           jack_max = jack_max,
           coverage_estimator = coverage_estimator,
           n_simulations = 0,
@@ -290,32 +300,28 @@ accum_ent_phylo.abundances <- function(
           check_arguments = FALSE
         )$entropy
         # Progress bar
-        if (show_progress & interactive()) {
-          utils::setTxtProgressBar(pgb, utils::getTxtProgressBar(pgb) + 1)
-        }
+        if (show_progress & interactive()) cli::cli_progress_update()
       }
       if (n_simulations > 0) {
         for (y_community in seq_len(n_communities)) {
           for (z_level in seq_along(levels)) {
             # Quantiles, recentered
             ent_phylo_envelope[x_interval, y_community, z_level, ] <- stats::quantile(
-              ent_phylo_sim[x_interval, y_community, z_level, ], 
+              ent_phylo_sim[x_interval, y_community, z_level, ],
               probs = c(alpha / 2, 1 - alpha / 2),
               na.rm = TRUE
-            ) - mean(ent_phylo_sim[x_interval, y_community, z_level, ]) + 
+            ) - mean(ent_phylo_sim[x_interval, y_community, z_level, ]) +
               ent_phylo_abd[x_interval, y_community, z_level]
           }
         }
       }
 
       # Progress bar
-      if (show_progress & interactive()) {
-        utils::setTxtProgressBar(pgb, utils::getTxtProgressBar(pgb) + 1)
-      }
+      if (show_progress & interactive()) cli::cli_progress_update()
     }
   }
-  if (show_progress & interactive()) close(pgb)
-  
+  if (show_progress & interactive()) cli::cli_progress_done()
+
   # Average entropy
   # Actual data
   ent_community <- apply(
@@ -335,18 +341,18 @@ accum_ent_phylo.abundances <- function(
       w = tree$intervals
     )
   }
-  
+
   # Format the result
   the_profile_phylo <- ent.tibble(
-    ent.matrix = ent_community, 
-    x = x, 
+    ent.matrix = ent_community,
+    x = x,
     levels = levels
   )
   # Add the estimator
   sample_sizes <- rowSums(x[, species_names])
   names(sample_sizes) = x$site
   the_profile_phylo <- dplyr::mutate(
-    the_profile_phylo, 
+    the_profile_phylo,
     estimator = dplyr::case_when(
       .data$level == sample_sizes[.data$site] ~ "Sample",
       .data$level < sample_sizes[.data$site] ~ "Interpolation",
@@ -357,13 +363,13 @@ accum_ent_phylo.abundances <- function(
   # Add simulation columns
   if (n_simulations > 0) {
     ent_inf <- ent.tibble(
-      ent.matrix = ent_quantiles[, , 1], 
-      x = x, 
+      ent.matrix = ent_quantiles[, , 1],
+      x = x,
       levels = levels
     )
     ent_sup <- ent.tibble(
-      ent.matrix = ent_quantiles[, , 2], 
-      x = x, 
+      ent.matrix = ent_quantiles[, , 2],
+      x = x,
       levels = levels
     )
     the_profile_phylo <- dplyr::bind_cols(
@@ -372,7 +378,7 @@ accum_ent_phylo.abundances <- function(
       sup = ent_sup$entropy
     )
   }
-  
+
   class(the_profile_phylo) <- c("accumulation", class(the_profile_phylo))
   return(the_profile_phylo)
 }
@@ -394,11 +400,11 @@ accum_div_phylo.numeric <- function(
     tree,
     q = 0,
     normalize = TRUE,
-    levels = NULL, 
+    levels = NULL,
     probability_estimator = c("Chao2015", "Chao2013","ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     n_simulations = 0,
@@ -406,17 +412,24 @@ accum_div_phylo.numeric <- function(
     show_progress = TRUE,
     ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
     # Prepare the tree
     tree <- as_phylo_divent(tree)
     # Check species names
     col_names <- colnames(x)
     species_names <- col_names[!col_names %in% non_species_columns]
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
-      stop("Some species are missing in the tree.")    
+      cli::cli_abort("Some species are missing in the tree.")
     }
     # Set levels if needed
     if (is.null(levels)) {
@@ -424,25 +437,21 @@ accum_div_phylo.numeric <- function(
       levels <- seq_len(sample_size)
     }
   }
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator) 
-  coverage_estimator <- match.arg(coverage_estimator) 
-  
-  # Make a species_distribution
-  species_distribution <- as_species_distribution(x)
-  
+
+  # Make a the_species_distribution
+  the_species_distribution <- as_species_distribution(x)
+
   # Diversity accumulation
   the_diversity <- accum_div_phylo.abundances(
-    x = species_distribution,
+    x = the_species_distribution,
     tree = tree,
     q = q,
     normalize = normalize,
-    levels = levels, 
+    levels = levels,
     probability_estimator = probability_estimator,
     unveiling = unveiling,
     richness_estimator = richness_estimator,
-    jack_alpha  = jack_alpha, 
+    jack_alpha  = jack_alpha,
     jack_max = jack_max,
     coverage_estimator = coverage_estimator,
     gamma = FALSE,
@@ -451,7 +460,7 @@ accum_div_phylo.numeric <- function(
     show_progress = show_progress,
     check_arguments = FALSE
   )
-  
+
   # Return
   return(the_diversity)
 }
@@ -465,11 +474,11 @@ accum_div_phylo.abundances <- function(
     tree,
     q = 0,
     normalize = TRUE,
-    levels = NULL, 
+    levels = NULL,
     probability_estimator = c("Chao2015", "Chao2013","ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     gamma = FALSE,
@@ -478,17 +487,24 @@ accum_div_phylo.abundances <- function(
     show_progress = TRUE,
     ...,
     check_arguments = TRUE) {
-  
+
+  # Check arguments
+  probability_estimator <- match.arg(probability_estimator)
+  unveiling <- match.arg(unveiling)
+  richness_estimator <- match.arg(richness_estimator)
+  coverage_estimator <- match.arg(coverage_estimator)
   if (any(check_arguments)) {
     check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
     # Prepare the tree
     tree <- as_phylo_divent(tree)
     # Check species names
     col_names <- colnames(x)
     species_names <- col_names[!col_names %in% non_species_columns]
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
-      stop("Some species are missing in the tree.")    
+      cli::cli_abort("Some species are missing in the tree.")
     }
     # Set levels if needed
     if (is.null(levels)) {
@@ -500,17 +516,13 @@ accum_div_phylo.abundances <- function(
       levels <- seq_len(sample_size)
     }
   }
-  probability_estimator <- match.arg(probability_estimator) 
-  unveiling <- match.arg(unveiling) 
-  richness_estimator <- match.arg(richness_estimator)
-  coverage_estimator <- match.arg(coverage_estimator)
-  
+
   the_entropy <- accum_ent_phylo.abundances(
     x,
     tree = tree,
     q = q,
     normalize = normalize,
-    levels = levels, 
+    levels = levels,
     probability_estimator = probability_estimator,
     unveiling = unveiling,
     richness_estimator = richness_estimator,
@@ -523,10 +535,10 @@ accum_div_phylo.abundances <- function(
     show_progress = show_progress,
     check_arguments = FALSE
   )
-    
+
   # Calculate diversity
   the_diversity <- dplyr::mutate(
-    the_entropy, 
+    the_entropy,
     diversity = exp_q(.data$entropy, q = q),
     .keep = "unused"
   )
@@ -542,19 +554,19 @@ accum_div_phylo.abundances <- function(
 
 
 #' Make a long tibble of entropy with a matrix of entropy
-#' 
+#'
 #' Utility for [accum_ent_phylo.abundances]
 #'
-#' @param ent.matrix The matrix of entropies. 
+#' @param ent.matrix The matrix of entropies.
 #' Rows are communities, columns are orders of entropy.
 #' @param x The species distribution.
 #' @param levels The levels of interpolation and extrapolation.
 #'
-#' @return A tibble. Columns are "site", "level" and "entropy".
+#' @returns A tibble. Columns are "site", "level" and "entropy".
 #' @noRd
 #'
 ent.tibble <- function(ent.matrix, x, levels) {
-  
+
   if (!is.matrix(ent.matrix)) {
     # ent.matrix may be a numeric vector (single community / min and max)
     ent.matrix <- t(as.matrix(ent.matrix))
@@ -576,9 +588,4 @@ ent.tibble <- function(ent.matrix, x, levels) {
   )
   # Return
   return(the_ent.tibble)
-}
-
-
-function(abundances, level) {
-  
 }

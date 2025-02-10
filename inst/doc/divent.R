@@ -38,7 +38,7 @@ div_hill(paracou_6_abd, q = 1)
 ## ----lnq----------------------------------------------------------------------
 (d2 <- div_hill(paracou_6_abd, q = 2)$diversity)
 ln_q(d2, q = 2)
-(e2 <-ent_tsallis(paracou_6_abd, q = 2)$entropy)
+(e2 <- ent_tsallis(paracou_6_abd, q = 2)$entropy)
 exp_q(e2, q = 2)
 
 ## ----PhyloDiversity-----------------------------------------------------------

@@ -7,9 +7,11 @@
 abd_freq_count(
   abd,
   level = NULL,
-  probability_estimator = c("naive", "Chao2013", "Chao2015", "ChaoShen"),
-  unveiling = c("none", "uniform", "geometric"),
+  probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
+  unveiling = c("geometric", "uniform", "none"),
   richness_estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
+  jack_alpha = 0.05,
+  jack_max = 10,
   coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
   check_arguments = TRUE
 )
@@ -17,16 +19,16 @@ abd_freq_count(
 \arguments{
 \item{abd}{A numeric vector containing species abundances.}
 
-\item{level}{The level of interpolation or extrapolation.
+\item{level}{the level of interpolation or extrapolation.
 It may be a sample size (an integer) or a sample coverage
 (a number between 0 and 1).
 If not \code{NULL}, the asymptotic \code{estimator} is ignored.}
 
-\item{probability_estimator}{A string containing one of the possible estimators
+\item{probability_estimator}{a string containing one of the possible estimators
 of the probability distribution (see \link{probabilities}).
 Used only for extrapolation.}
 
-\item{unveiling}{A string containing one of the possible unveiling methods
+\item{unveiling}{a string containing one of the possible unveiling methods
 to estimate the probabilities of the unobserved species (see \link{probabilities}).
 Used only for extrapolation.}
 
@@ -34,9 +36,13 @@ Used only for extrapolation.}
 \link{div_richness} to evaluate the total number of species in \link{probabilities}.
 Used only for extrapolation.}
 
-\item{coverage_estimator}{An estimator of sample coverage used by \link{coverage}.}
+\item{jack_alpha}{the risk level, 5\% by default, used to optimize the jackknife order.}
 
-\item{check_arguments}{If \code{TRUE}, the function arguments are verified.
+\item{jack_max}{the highest jackknife order allowed. Default is 10.}
+
+\item{coverage_estimator}{an estimator of sample coverage used by \link{coverage}.}
+
+\item{check_arguments}{if \code{TRUE}, the function arguments are verified.
 Should be set to \code{FALSE} to save time when the arguments have been checked elsewhere.}
 }
 \value{
@@ -57,5 +63,8 @@ distribution of the community by \link{probabilities} and eq. (5)
 of \insertCite{Chao2014}{divent}.
 }
 \examples{
-abd_freq_count(paracou_6_abd[1, -(1:2)])
+abd_freq_count(as.numeric(paracou_6_abd[1, ]))
+}
+\references{
+\insertAllCited{}
 }

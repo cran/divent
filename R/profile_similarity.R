@@ -1,14 +1,14 @@
 #' Similarity-Based Diversity Profile of a Community
-#' 
+#'
 #' Calculate the diversity profile of a community, i.e. its similarity-based diversity
 #' against its order.
-#' 
-#' A bootstrap confidence interval can be produced by simulating communities 
-#' (their number is `n_simulations`) with [rcommunity] and calculating their profiles. 
-#' Simulating communities implies a downward bias in the estimation: 
-#' rare species of the actual community may have abundance zero in simulated communities. 
+#'
+#' A bootstrap confidence interval can be produced by simulating communities
+#' (their number is `n_simulations`) with [rcommunity] and calculating their profiles.
+#' Simulating communities implies a downward bias in the estimation:
+#' rare species of the actual community may have abundance zero in simulated communities.
 #' Simulated diversity values are recentered so that their mean is that of the actual community.
-#' 
+#'
 #' @inheritParams check_divent_args
 #' @param x An object, that may be a numeric vector containing abundances or probabilities,
 #' or an object of class [abundances] or [probabilities].
@@ -20,12 +20,12 @@
 #' # Profile
 #' profile_similarity(paracou_6_abd, similarities = Z, q = 2)
 #'
-#' @return A tibble with the site names, the estimators used and the estimated diversity at each order.
+#' @returns A tibble with the site names, the estimators used and the estimated diversity at each order.
 #' This is an object of class "profile" that can be plotted.
-#' 
+#'
 #' @references
 #' \insertAllCited{}
-#' 
+#'
 #' @name profile_similarity
 NULL
 
@@ -34,9 +34,9 @@ NULL
 #'
 #' @export
 profile_similarity <- function(
-    x, 
+    x,
     similarities,
-    orders = seq(from = 0, to = 2, by = 0.1), 
+    orders = seq(from = 0, to = 2, by = 0.1),
     ...) {
   UseMethod("profile_similarity")
 }
@@ -45,28 +45,21 @@ profile_similarity <- function(
 #' @rdname profile_similarity
 #'
 #' @param orders The orders of diversity used to build the profile.
-#' @param estimator An estimator of entropy. 
+#' @param estimator An estimator of entropy.
 #' @param n_simulations The number of simulations used to estimate the confidence envelope of the profile.
 #' @param alpha The risk level, 5% by default, of the confidence envelope of the profile.
-#' @param bootstrap The method used to obtain the probabilities to generate 
-#' bootstrapped communities from observed abundances. 
-#' If "Marcon2012", the probabilities are simply the abundances divided by the total
-#' number of individuals \insertCite{Marcon2012a}{divent}. 
-#' If "Chao2013" or "Chao2015" (by default), a more sophisticated approach is used 
-#' (see [as_probabilities]) following \insertCite{Chao2013;textual}{divent} or 
-#' \insertCite{Chao2015;textual}{divent}.
-#' 
+#'
 #' @export
 profile_similarity.numeric <- function(
-    x, 
+    x,
     similarities = diag(length(x)),
-    orders = seq(from = 0, to = 2, by = 0.1), 
-    estimator = c("UnveilJ", "Max", "ChaoShen", "MarconZhang", 
+    orders = seq(from = 0, to = 2, by = 0.1),
+    estimator = c("UnveilJ", "Max", "ChaoShen", "MarconZhang",
                   "UnveilC", "UnveiliC", "naive"),
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
     richness_estimator = c("jackknife", "iChao1", "Chao1", "naive"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     sample_coverage = NULL,
@@ -77,21 +70,31 @@ profile_similarity.numeric <- function(
     show_progress = TRUE,
     ...,
     check_arguments = TRUE) {
-  
-  if (any(check_arguments)) {
-    check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
-    similarities <- checked_matrix(similarities, x)
-  }
+
+  # Check arguments
   estimator <- match.arg(estimator)
   probability_estimator <- match.arg(probability_estimator)
   unveiling <- match.arg(unveiling)
   coverage_estimator <- match.arg(coverage_estimator)
   bootstrap <- match.arg(bootstrap)
-  
+  if (any(check_arguments)) {
+    check_divent_args()
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
+    similarities <- checked_matrix(similarities, x)
+  }
+
   # Numeric vector, no simulation ----
   if (as_numeric) {
-    if (n_simulations > 0) stop ("No simulations are allowed if a numeric vector is expected ('as_numeric = TRUE').")
+    if (n_simulations > 0) {
+      cli::cli_abort(
+        c(
+          "No simulations are allowed if a numeric vector is expected",
+          "i" = "Change argument for {.code as_numeric = FALSE}"
+        )
+      )
+    }
     the_profile_similarity <- vapply(
       orders,
       FUN = function(q) {
@@ -102,8 +105,8 @@ profile_similarity.numeric <- function(
           estimator = estimator,
           probability_estimator = probability_estimator,
           unveiling = unveiling,
-          jack_alpha  = jack_alpha, 
-          jack_max = jack_max, 
+          jack_alpha  = jack_alpha,
+          jack_max = jack_max,
           coverage_estimator = coverage_estimator,
           sample_coverage = sample_coverage,
           as_numeric = TRUE,
@@ -113,8 +116,8 @@ profile_similarity.numeric <- function(
       FUN.VALUE = 0
     )
     return(the_profile_similarity)
-  } 
-  
+  }
+
   # Regular output, simulations are allowed ----
   the_profile_similarity <- lapply(
     orders,
@@ -126,8 +129,8 @@ profile_similarity.numeric <- function(
         estimator = estimator,
         probability_estimator = probability_estimator,
         unveiling = unveiling,
-        jack_alpha  = jack_alpha, 
-        jack_max = jack_max, 
+        jack_alpha  = jack_alpha,
+        jack_max = jack_max,
         coverage_estimator = coverage_estimator,
         as_numeric = FALSE,
         check_arguments = FALSE
@@ -136,11 +139,17 @@ profile_similarity.numeric <- function(
   )
   # Make a tibble with the list
   the_profile_similarity <- do.call(rbind.data.frame, the_profile_similarity)
-  
+
   if (n_simulations > 0) {
     # Simulations ----
     if (!is_integer_values(x)) {
-      warning("Evaluation of the confidence interval of community profiles requires integer abundances. They have been rounded.")
+      cli::cli_alert_warning(
+        paste(
+          "Evaluation of the confidence interval of community profiles requires",
+          "integer abundances."
+        )
+      )
+      cli::cli_alert("They have been rounded.")
     }
     abd_int <- round(x)
     # Simulate communities
@@ -160,17 +169,17 @@ profile_similarity.numeric <- function(
     for (i in seq_len(n_simulations)) {
       # Parallelize. Do not allow more forks.
       profiles_list <- parallel::mclapply(
-        orders, 
+        orders,
         FUN = function(q) {
           div_similarity.numeric(
-            communities[i, !colnames(communities) %in% non_species_columns], 
+            communities[i, !colnames(communities) %in% non_species_columns],
             similarities = similarities,
-            q = q, 
+            q = q,
             estimator = estimator,
             probability_estimator = probability_estimator,
             unveiling = unveiling,
-            jack_alpha  = jack_alpha, 
-            jack_max = jack_max, 
+            jack_alpha  = jack_alpha,
+            jack_max = jack_max,
             coverage_estimator = coverage_estimator,
             sample_coverage = sample_coverage,
             as_numeric = TRUE,
@@ -189,12 +198,12 @@ profile_similarity.numeric <- function(
     )
     # Quantiles
     div_quantiles <- apply(
-      profile_similarities, 
-      MARGIN = 2, 
+      profile_similarities,
+      MARGIN = 2,
       FUN = stats::quantile,
       probs = c(alpha / 2, 1 - alpha / 2)
     )
-    # Format the result 
+    # Format the result
     the_profile_similarity <- tibble::tibble(
       the_profile_similarity,
       inf = div_quantiles[1, ],
@@ -202,7 +211,7 @@ profile_similarity.numeric <- function(
     )
   }
   class(the_profile_similarity) <- c("profile", class(the_profile_similarity))
-  
+
   return(the_profile_similarity)
 }
 
@@ -211,14 +220,14 @@ profile_similarity.numeric <- function(
 #'
 #' @export
 profile_similarity.species_distribution <- function(
-    x, 
+    x,
     similarities = diag(sum(!colnames(x) %in% non_species_columns)),
-    orders = seq(from = 0, to = 2, by = 0.1), 
-    estimator = c("UnveilJ", "Max", "ChaoShen", "MarconZhang", 
+    orders = seq(from = 0, to = 2, by = 0.1),
+    estimator = c("UnveilJ", "Max", "ChaoShen", "MarconZhang",
                   "UnveilC", "UnveiliC", "naive"),
     probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
     unveiling = c("geometric", "uniform", "none"),
-    jack_alpha  = 0.05, 
+    jack_alpha  = 0.05,
     jack_max = 10,
     coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
     gamma = FALSE,
@@ -228,33 +237,36 @@ profile_similarity.species_distribution <- function(
     show_progress = TRUE,
     ...,
     check_arguments = TRUE) {
-  
-  if (any(check_arguments)) {
-    check_divent_args()
-    if (any(x < 0)) stop("Species probabilities or abundances must be positive.")
-    similarities <- checked_matrix(similarities, x)
-  }
+
+  # Check arguments
   estimator <- match.arg(estimator)
   probability_estimator <- match.arg(probability_estimator)
   unveiling <- match.arg(unveiling)
   coverage_estimator <- match.arg(coverage_estimator)
   bootstrap <- match.arg(bootstrap)
-  
+  if (any(check_arguments)) {
+    check_divent_args()
+    if (any(x < 0)) {
+      cli::cli_abort("Species probabilities or abundances must be positive.")
+    }
+    similarities <- checked_matrix(similarities, x)
+  }
+
   if (gamma) {
     the_profile_similarity <- profile_similarity.numeric(
       metacommunity.abundances(
-        x = x, 
-        as_numeric = TRUE, 
+        x = x,
+        as_numeric = TRUE,
         check_arguments = FALSE
       ),
       # Arguments
       similarities = similarities,
-      orders = orders, 
+      orders = orders,
       estimator = estimator,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
-      jack_alpha  = jack_alpha, 
-      jack_max = jack_max, 
+      jack_alpha  = jack_alpha,
+      jack_max = jack_max,
       coverage_estimator = coverage_estimator,
       as_numeric = FALSE,
       n_simulations = n_simulations,
@@ -267,17 +279,17 @@ profile_similarity.species_distribution <- function(
     # Apply profile_similarity.numeric() to each site
     profile_similarity_list <- apply(
       # Eliminate site and weight columns
-      x[, !colnames(x) %in% non_species_columns], 
+      x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
       FUN = profile_similarity.numeric,
       # Arguments
       similarities = similarities,
-      orders = orders, 
+      orders = orders,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
-      jack_alpha  = jack_alpha, 
-      jack_max = jack_max, 
+      jack_alpha  = jack_alpha,
+      jack_max = jack_max,
       coverage_estimator = coverage_estimator,
       as_numeric = FALSE,
       n_simulations = n_simulations,
@@ -294,6 +306,6 @@ profile_similarity.species_distribution <- function(
     )
   }
   class(the_profile_similarity) <- c("profile", class(the_profile_similarity))
-  
+
   return(the_profile_similarity)
 }
