@@ -38,8 +38,8 @@ NULL
 #' # Generate a random community
 #' X <- rspcommunity(1, size = 50, species_number = 3)
 #' # Calculate the accumulation of richness
-#' accum <- accum_sp_hill(X)
-#' plot(accum, q = 0)
+#' accum_n <- accum_sp_hill(X)
+#' plot(accum_n, q = 0)
 #' # along distance
 #' accum_r <- accum_sp_hill(X, orders = 1, r = seq(0, .5, .05))
 #' autoplot(accum_r, q = 1)
@@ -66,7 +66,7 @@ accum_sp_tsallis <- function(
     # A number of neighbors ----
     # n nearest neighbors. Find them.
     neighbors.matrix <- spatstat.geom::nnwhich(X, k = neighbors)
-    # Add the reference point to get a table: center points in line, neighbors in columns,
+    # Add the reference point to get a table: center points in rows, neighbors in columns,
     # including the point itself in the first column
     neighbors.matrix <- cbind(Reference = 1:X$n, neighbors.matrix)
 

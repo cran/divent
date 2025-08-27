@@ -1,3 +1,10 @@
+# divent 0.5-3
+
+## Bug correction
+
+- `species_distribution()` raised an error when input was a vector of factors.
+
+
 # divent 0.5-2
 
 ## Features
