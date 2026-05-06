@@ -58,10 +58,12 @@ div_similarity(paracou_6_abd, similarities = Z, q = 2)
 profile_hill(paracou_6_abd) %>% autoplot
 
 ## ----PDiversityProfile--------------------------------------------------------
-profile_phylo(paracou_6_abd, tree = paracou_6_taxo) %>% autoplot
+profile_phylo(paracou_6_abd, tree = paracou_6_taxo) %>% 
+  autoplot()
 # Similarity matrix
 Z <- fun_similarity(paracou_6_fundist)
-profile_similarity(paracou_6_abd, similarities = Z) %>% autoplot
+profile_similarity(paracou_6_abd, similarities = Z) %>%
+  autoplot()
 
 ## ----div_level----------------------------------------------------------------
 # Estimate the diversity of 1000 individuals
