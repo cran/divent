@@ -50,15 +50,15 @@ div_pd <- function(x, tree, ...) {
 #'
 #' @export
 div_pd.numeric <- function(
-    x,
-    tree,
-    prune = FALSE,
-    as_numeric = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  tree,
+  prune = FALSE,
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -68,7 +68,7 @@ div_pd.numeric <- function(
   species_names <- names(x)
   # Prepare the tree
   tree <- as_phylo_divent(tree)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     # Check species in the tree
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
       cli::cli_abort("Some species are missing in the tree.")
@@ -78,7 +78,7 @@ div_pd.numeric <- function(
   # More species in the tree than in x?
   if (prune) {
     species_not_found <- setdiff(tree$phylo$tip.label, names(x))
-    if (length(species_not_found) > 0){
+    if (length(species_not_found) > 0) {
       # Prune the tree to keep species in Ps only
       # tree$phylo is the only updated item of tree because others are useless
       tree$phylo <- ape::drop.tip(tree$phylo, species_not_found)
@@ -114,16 +114,16 @@ div_pd.numeric <- function(
 #'
 #' @export
 div_pd.species_distribution <- function(
-    x,
-    tree,
-    prune = FALSE,
-    gamma = FALSE,
-    as_numeric  = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  tree,
+  prune = FALSE,
+  gamma = FALSE,
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -144,13 +144,13 @@ div_pd.species_distribution <- function(
 
   if (gamma) {
     # Build the metacommunity
-    abd <- metacommunity.abundances(
+    abundances <- metacommunity(
       x,
       as_numeric = TRUE,
       check_arguments = FALSE
     )
-    the_diversity <- div_pd.numeric(
-      abd,
+    the_diversity <- div_pd(
+      abundances,
       tree = tree,
       as_numeric = as_numeric,
       check_arguments = FALSE
@@ -163,14 +163,14 @@ div_pd.species_distribution <- function(
       )
     }
     return(the_diversity)
-   } else {
+  } else {
     # Apply div_pd.numeric() to each site
     div_pd_list <- apply(
       # Eliminate site and weight columns
       x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
-      FUN = div_pd.numeric,
+      FUN = div_pd,
       # Arguments
       tree = tree,
       prune = prune,
@@ -182,7 +182,7 @@ div_pd.species_distribution <- function(
       # Restore non-species columns
       x[colnames(x) %in% non_species_columns],
       # Coerce the list returned by apply into a dataframe
-      do.call(rbind.data.frame, div_pd_list)
+      dplyr::bind_rows(div_pd_list)
     )
     if (as_numeric) {
       return(the_diversity$diversity)
@@ -202,8 +202,7 @@ div_pd.species_distribution <- function(
 #'
 #' @returns a string: the name of the tip.
 #' @noRd
-tips <- function(tree, node)
-{
+tips <- function(tree, node) {
   tips_n <- length(tree$phylo$tip.label)
   if (node > tips_n) {
     # internal node numbers start after the last tip

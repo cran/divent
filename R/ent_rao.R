@@ -56,18 +56,18 @@ ent_rao <- function(x, ...) {
 #'
 #' @export
 ent_rao.numeric <- function(
-    x,
-    distances = NULL,
-    tree = NULL,
-    normalize = TRUE,
-    estimator = c("Lande", "naive"),
-    as_numeric  = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  distances = NULL,
+  tree = NULL,
+  normalize = TRUE,
+  estimator = c("Lande", "naive"),
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   estimator <- match.arg(estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -112,9 +112,10 @@ ent_rao.numeric <- function(
   }
 
   # Entropy of a vector of probabilities ----
-  if (abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
+  # More than one value and their sum equal to 1
+  if (sum(x > 0) > 1 && abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
     # Probabilities sum to 1, allowing rounding error
-    the_entropy <- mean(distances %*% x)
+    the_entropy <- x %*% distances %*% x
     if (as_numeric) {
       return(the_entropy)
     } else {
@@ -177,10 +178,10 @@ ent_rao.numeric <- function(
 
   if (estimator == "naive") {
     # Naive estimator ----
-    the_entropy <- mean(distances %*% prob)
+    the_entropy <- prob %*% distances %*% prob
   } else if (estimator == "Lande") {
     # Lande's estimator ----
-    the_entropy <- mean(distances %*% prob) * sample_size / (sample_size - 1)
+    the_entropy <- prob %*% distances %*% prob * sample_size / (sample_size - 1)
   }
 
   # Return
@@ -202,19 +203,19 @@ ent_rao.numeric <- function(
 #'
 #' @export
 ent_rao.species_distribution <- function(
-    x,
-    distances = NULL,
-    tree = NULL,
-    normalize = TRUE,
-    estimator = c("Lande", "naive"),
-    gamma = FALSE,
-    as_numeric  = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  distances = NULL,
+  tree = NULL,
+  normalize = TRUE,
+  estimator = c("Lande", "naive"),
+  gamma = FALSE,
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   estimator <- match.arg(estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -253,12 +254,12 @@ ent_rao.species_distribution <- function(
 
   if (gamma) {
     # Build the metacommunity
-    abd <- metacommunity.abundances(
+    abd <- metacommunity(
       x,
       as_numeric = TRUE,
       check_arguments = FALSE
     )
-    the_entropy <- ent_rao.numeric(
+    the_entropy <- ent_rao(
       abd,
       distances = distances,
       tree = tree,
@@ -275,14 +276,14 @@ ent_rao.species_distribution <- function(
       )
     }
     return(the_entropy)
-   } else {
+  } else {
     # Apply ent_rao.numeric() to each site
     ent_rao_list <- apply(
       # Eliminate site and weight columns
       x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
-      FUN = ent_rao.numeric,
+      FUN = ent_rao,
       # Arguments
       distances = distances,
       tree = tree,
@@ -296,7 +297,7 @@ ent_rao.species_distribution <- function(
       # Restore non-species columns
       x[colnames(x) %in% non_species_columns],
       # Coerce the list returned by apply into a dataframe
-      do.call(rbind.data.frame, ent_rao_list)
+      dplyr::bind_rows(ent_rao_list)
     )
     if (as_numeric) {
       return(the_entropy$entropy)

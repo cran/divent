@@ -55,17 +55,17 @@ ent_allen <- function(x, tree, ...) {
 #'
 #' @export
 ent_allen.numeric <- function(
-    x,
-    tree,
-    q = 1,
-    normalize = TRUE,
-    prune = FALSE,
-    as_numeric = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  tree,
+  q = 1,
+  normalize = TRUE,
+  prune = FALSE,
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -75,7 +75,7 @@ ent_allen.numeric <- function(
   species_names <- names(x)
   # Prepare the tree
   tree <- as_phylo_divent(tree)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     # Check species in the tree
     if (length(setdiff(species_names, rownames(tree$phylo_groups))) != 0) {
       cli::cli_abort("Some species are missing in the tree.")
@@ -85,7 +85,7 @@ ent_allen.numeric <- function(
   # More species in the tree than in x?
   if (prune) {
     species_not_found <- setdiff(tree$phylo$tip.label, names(x))
-    if (length(species_not_found) > 0){
+    if (length(species_not_found) > 0) {
       # Prune the tree to keep species in Ps only
       # tree$phylo is the only updated item of tree because others are useless
       tree$phylo <- ape::drop.tip(tree$phylo, species_not_found)
@@ -108,7 +108,7 @@ ent_allen.numeric <- function(
   branches <- branches[branches != 0]
 
   # Sum the lengths of branches with abundance > 0
-  the_entropy <- -sum(lengths *  branches^q * ln_q(branches, q)) /
+  the_entropy <- -sum(lengths * branches^q * ln_q(branches, q)) /
     ifelse(normalize, T_bar, 1)
 
   # Return
@@ -130,18 +130,18 @@ ent_allen.numeric <- function(
 #'
 #' @export
 ent_allen.species_distribution <- function(
-    x,
-    tree,
-    q = 1,
-    normalize = TRUE,
-    prune = FALSE,
-    gamma = FALSE,
-    as_numeric  = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  tree,
+  q = 1,
+  normalize = TRUE,
+  prune = FALSE,
+  gamma = FALSE,
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -162,12 +162,12 @@ ent_allen.species_distribution <- function(
 
   if (gamma) {
     # Build the metacommunity
-    abd <- metacommunity.abundances(
+    abd <- metacommunity(
       x,
       as_numeric = TRUE,
       check_arguments = FALSE
     )
-    the_entropy <- ent_allen.numeric(
+    the_entropy <- ent_allen(
       abd,
       tree = tree,
       q = q,
@@ -183,14 +183,14 @@ ent_allen.species_distribution <- function(
       )
     }
     return(the_entropy)
-   } else {
+  } else {
     # Apply ent_allen.numeric() to each site
     ent_allen_list <- apply(
       # Eliminate site and weight columns
       x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
-      FUN = ent_allen.numeric,
+      FUN = ent_allen,
       # Arguments
       tree = tree,
       q = q,
@@ -204,7 +204,7 @@ ent_allen.species_distribution <- function(
       # Restore non-species columns
       x[colnames(x) %in% non_species_columns],
       # Coerce the list returned by apply into a dataframe
-      do.call(rbind.data.frame, ent_allen_list)
+      dplyr::bind_rows(ent_allen_list)
     )
     if (as_numeric) {
       return(the_entropy$entropy)

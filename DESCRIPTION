@@ -1,10 +1,23 @@
 Package: divent
 Type: Package
 Title: Entropy Partitioning to Measure Diversity
-Version: 0.5-4
-Authors@R: c(
-  person("Eric", "Marcon", email = "eric.marcon@agroparistech.fr", role = c("aut", "cre"), comment = c(ORCID="0000-0002-5249-321X")),
-  person("Florence", "Puech", email = "florence.puech@universite-paris-saclay.fr", role = "aut", comment = c(ORCID = "0000-0002-5279-6878"))
+Version: 0.6-0
+Authors@R: 
+  c(
+    person(
+      given = "Eric", 
+      family  = "Marcon", 
+      email = "eric.marcon@agroparistech.fr", 
+      role = c("aut", "cre"), 
+      comment = c(ORCID="0000-0002-5249-321X")
+    ),
+    person(
+      given = "Florence", 
+      family = "Puech", 
+      email = "florence.puech@universite-paris-saclay.fr", 
+      role = "aut", 
+      comment = c(ORCID = "0000-0002-5279-6878")
+    )
   )
 Description: Measurement and partitioning of diversity, based on Tsallis entropy, following Marcon and Herault (2015) <doi:10.18637/jss.v067.i08>.
   'divent' provides functions to estimate alpha, beta and gamma diversity of communities, including phylogenetic and functional diversity.
@@ -19,17 +32,20 @@ Imports: alphahull, ape, cli, dbmss, dplyr, ggplot2, graphics, igraph,
         tibble, tidyr, vegan
 Suggests: ade4, knitr, pkgdown, rmarkdown, SPECIES, testthat (>= 3.0.0)
 LinkingTo: Rcpp, RcppParallel
-Config/testthat/edition: 3
+SystemRequirements: GNU make, pandoc
+RdMacros: Rdpack
+VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
-RdMacros: Rdpack
-SystemRequirements: GNU make, pandoc
-VignetteBuilder: knitr
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.1
+Config/testthat/edition: 3
+Config/testthat/parallel: true
+Config/Needs/coverage: covr
+Config/Needs/website: iNEXT, spatstat
 NeedsCompilation: yes
-Packaged: 2026-05-06 13:59:40 UTC; emarc
+Packaged: 2026-11-07 20:20:19 UTC; emarc
 Author: Eric Marcon [aut, cre] (ORCID: <https://orcid.org/0000-0002-5249-321X>),
   Florence Puech [aut] (ORCID: <https://orcid.org/0000-0002-5279-6878>)
 Maintainer: Eric Marcon <eric.marcon@agroparistech.fr>
 Repository: CRAN
-Date/Publication: 2026-05-06 14:40:02 UTC
+Date/Publication: 2026-11-07 21:20:02 UTC

@@ -43,16 +43,16 @@ ent_hurlbert <- function(x, k = 2, ...) {
 #'
 #' @export
 ent_hurlbert.numeric <- function(
-    x,
-    k = 2,
-    estimator = c("Hurlbert", "naive"),
-    as_numeric = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  k = 2,
+  estimator = c("Hurlbert", "naive"),
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   estimator <- match.arg(estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -60,7 +60,8 @@ ent_hurlbert.numeric <- function(
   }
 
   # Entropy of a vector of probabilities ----
-  if (abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
+  # More than one value and their sum equal to 1
+  if (sum(x > 0) > 1 && abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
     the_entropy <- sum(1 - (1 - x)^k)
     if (as_numeric) {
       return(the_entropy)
@@ -89,7 +90,9 @@ ent_hurlbert.numeric <- function(
 
   # Entropy of a vector of abundances ----
   if (!is_integer_values(abd)) {
-    cli::cli_alert_warning("The estimator can't be applied to non-integer values.")
+    cli::cli_alert_warning(
+      "The estimator can't be applied to non-integer values."
+    )
     cli::cli_alert("{.code estimator} forced to 'naive.'")
     estimator <- "naive"
   }
@@ -132,21 +135,20 @@ ent_hurlbert.numeric <- function(
 }
 
 
-
 #' @rdname ent_hurlbert
 #'
 #' @export
 ent_hurlbert.species_distribution <- function(
-    x,
-    k = 2,
-    estimator = c("Hurlbert", "naive"),
-    as_numeric = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  k = 2,
+  estimator = c("Hurlbert", "naive"),
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   estimator <- match.arg(estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -159,7 +161,7 @@ ent_hurlbert.species_distribution <- function(
     x[, !colnames(x) %in% non_species_columns],
     # Apply to each row
     MARGIN = 1,
-    FUN = ent_hurlbert.numeric,
+    FUN = ent_hurlbert,
     # Arguments
     k = k,
     estimator = estimator,
@@ -175,7 +177,7 @@ ent_hurlbert.species_distribution <- function(
         # Restore non-species columns
         x[colnames(x) %in% non_species_columns],
         # Coerce the list returned by apply into a dataframe
-        do.call(rbind.data.frame, ent_hurlbert_sites)
+        dplyr::bind_rows(ent_hurlbert_sites)
       )
     )
   }

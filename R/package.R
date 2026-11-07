@@ -17,7 +17,6 @@
 #' @importFrom RcppParallel RcppParallelLibs
 #' @useDynLib divent, .registration = TRUE
 
-
 # Functions to reexport ----
 #' @export
 ggplot2::autoplot
@@ -61,22 +60,22 @@ base::as.matrix
 #'     labs(color = "Species", size = "Basal area")
 #'}
 autoplot.wmppp <- function(
-    object,
-    ...,
-    show.window = TRUE,
-    MaxPointTypes = 6,
-    Other = "Other",
-    main = NULL,
-    xlab = NULL,
-    ylab = NULL,
-    LegendLabels = NULL,
-    labelSize = "Weight",
-    labelColor = "Type",
-    palette="Set1",
-    windowColor = "black",
-    windowFill = "transparent",
-    alpha = 1) {
-
+  object,
+  ...,
+  show.window = TRUE,
+  MaxPointTypes = 6,
+  Other = "Other",
+  main = NULL,
+  xlab = NULL,
+  ylab = NULL,
+  LegendLabels = NULL,
+  labelSize = "Weight",
+  labelColor = "Type",
+  palette = "Set1",
+  windowColor = "black",
+  windowFill = "transparent",
+  alpha = 1
+) {
   return(
     dbmss:::autoplot.wmppp(
       object = object,
@@ -187,7 +186,6 @@ utils::globalVariables("non_species_columns")
 "paracou_6_fundist"
 
 
-
 #' Mock data
 #'
 #' A simple dataset to test diversity functions.
@@ -201,7 +199,9 @@ utils::globalVariables("non_species_columns")
 #' @examples
 #' mock_3sp_abd
 #' mock_3sp_dist
-#' plot(mock_3sp_tree)
+#' if (require("ape")) {
+#'   plot(mock_3sp_tree, direction = "downwards")
+#' }
 #' axis(2)
 #'
 "mock_3sp_abd"
@@ -213,12 +213,12 @@ utils::globalVariables("non_species_columns")
 "mock_3sp_tree"
 
 
-
 # Utilities ----
 
 # Names of variables inside functions:
 # abd: a numeric vector of abundances
 # prob: a numeric vector of probabilities
+# abd_prob: possibly abd or prob
 # prob_unv : unveiled probabilities
 # abundances / probabilities: an object of class abundances / probabilities
 # s_0, s_1,  ...: species observed 0, 1, ... times
@@ -228,7 +228,6 @@ utils::globalVariables("non_species_columns")
 # sample_coverage: coverage of order 1
 # coverage_deficit_2: coverage deficit of order 2 of the sample
 # species_names: char vector with the species names of the community
-
 
 #' check_divent_args
 #'
@@ -261,6 +260,7 @@ utils::globalVariables("non_species_columns")
 #' @param distribution The distribution of species abundances.
 #' May be "lnorm" (log-normal), "lseries" (log-series), "geom" (geometric) or
 #' "bstick" (broken stick).
+#' @param entropy_estimator an estimator of asymptotic entropy, diversity or richness.
 #' @param estimator an estimator of asymptotic entropy, diversity or richness.
 #' @param fisher_alpha Fisher's \eqn{\alpha} in the log-series distribution.
 #' @param gamma if `TRUE`, \eqn{\gamma} diversity, i.e. diversity of the metacommunity, is computed.
@@ -330,83 +330,69 @@ utils::globalVariables("non_species_columns")
 #'
 #' @returns Returns `TRUE` or stops if a problem is detected.
 #'
-#' @export
 #'
 #' @keywords internal
 #'
 check_divent_args <- function(
-    abd = NULL,
-    abundances = NULL,
-    alpha = NULL,
-    as_numeric = NULL,
-    bootstrap = NULL,
-    check_arguments = NULL,
-    correction = NULL,
-    coverage_estimator = NULL,
-    distances = NULL,
-    distribution = NULL,
-    estimator = NULL,
-    fisher_alpha = NULL,
-    gamma = NULL,
-    global = NULL,
-    jack_alpha = NULL,
-    jack_max = NULL,
-    k = NULL,
-    level = NULL,
-    n = NULL,
-    n_simulations = NULL,
-    normalize = NULL,
-    orders = NULL,
-    prob = NULL,
-    prob_geom = NULL,
-    probability_estimator = NULL,
-    q = NULL,
-    q_threshold = NULL,
-    r = NULL,
-    rate = NULL,
-    richness_estimator = NULL,
-    sample_coverage = NULL,
-    sd_lnorm = NULL,
-    show_progress = NULL,
-    similarities = NULL,
-    size = NULL,
-    species_number = NULL,
-    species_distribution = NULL,
-    thomas_mu = NULL,
-    thomas_scale = NULL,
-    tree = NULL,
-    use.names = NULL,
-    unveiling = NULL,
-    weights = NULL,
-    w_max = NULL,
-    w_mean = NULL,
-    w_min = NULL,
-    weibull_scale = NULL,
-    weibull_shape = NULL,
-    X = NULL,
-    win = NULL) {
-
-  # Verify that the package is attached
-  if (!"divent" %in% .packages()) {
-    cli::cli_alert_warning(
-      paste(
-        "Function arguments cannot be checked because the package",
-        "{.pkg divent} is not attached."
-      )
-    )
-    cli::cli_alert(
-      paste(
-        "Add {.code CheckArguments=FALSE} to suppress this warning or",
-        "run {.code library('divent')}."
-      )
-    )
-    return(TRUE)
-  }
+  abd = NULL,
+  abundances = NULL,
+  alpha = NULL,
+  as_numeric = NULL,
+  bootstrap = NULL,
+  check_arguments = NULL,
+  correction = NULL,
+  coverage_estimator = NULL,
+  distances = NULL,
+  distribution = NULL,
+  entropy_estimator = NULL,
+  estimator = NULL,
+  fisher_alpha = NULL,
+  gamma = NULL,
+  global = NULL,
+  jack_alpha = NULL,
+  jack_max = NULL,
+  k = NULL,
+  level = NULL,
+  n = NULL,
+  n_simulations = NULL,
+  normalize = NULL,
+  orders = NULL,
+  prob = NULL,
+  prob_geom = NULL,
+  probability_estimator = NULL,
+  q = NULL,
+  q_threshold = NULL,
+  r = NULL,
+  rate = NULL,
+  richness_estimator = NULL,
+  sample_coverage = NULL,
+  sd_lnorm = NULL,
+  show_progress = NULL,
+  similarities = NULL,
+  size = NULL,
+  species_number = NULL,
+  species_distribution = NULL,
+  thomas_mu = NULL,
+  thomas_scale = NULL,
+  tree = NULL,
+  use.names = NULL,
+  unveiling = NULL,
+  weights = NULL,
+  w_max = NULL,
+  w_mean = NULL,
+  w_min = NULL,
+  weibull_scale = NULL,
+  weibull_shape = NULL,
+  X = NULL,
+  win = NULL
+) {
   # Get the list of arguments of the parent function
   parent_function <- sys.call(-1)[[1]]
   # If apply() or similar was used, the function name is not in parent_function: sys.call(-1)[[1]] returns "FUN"
   if (parent_function == "FUN") {
-    warning("Function arguments cannot be checked, probably because you used apply(). Add CheckArguments=FALSE to suppress this warning.")
+    warning(
+      "Function arguments cannot be checked, probably because you used apply(). Add check_arguments=FALSE to suppress this warning."
+    )
     return(TRUE)
   }
 
@@ -457,14 +443,14 @@ check_divent_args <- function(
   # alpha
   if (!is.na(names(args["alpha"]))) {
     alpha <- eval(expression(alpha), parent.frame())
-    if (!is.numeric(alpha) | length(alpha) != 1) {
+    if (!is.numeric(alpha) || length(alpha) != 1) {
       error_message(
         "alpha must be a number.",
         alpha,
         parent_function
       )
     }
-    if (any(alpha < 0) | any(alpha > 1)) {
+    if (any(alpha < 0 | alpha > 1)) {
       error_message(
         "alpha must be between 0 and 1",
         alpha,
@@ -475,7 +461,7 @@ check_divent_args <- function(
   # as_numeric
   if (!is.na(names(args["as_numeric"]))) {
     as_numeric <- eval(expression(as_numeric), parent.frame())
-    if (!is.logical(as_numeric) | length(as_numeric) != 1) {
+    if (!is.logical(as_numeric) || length(as_numeric) != 1) {
       error_message(
         "as_numeric must be TRUE or FALSE",
         as_numeric,
@@ -487,7 +473,7 @@ check_divent_args <- function(
   # check_arguments
   if (!is.na(names(args["check_arguments"]))) {
     check_arguments <- eval(expression(check_arguments), parent.frame())
-    if (!is.logical(check_arguments) | length(check_arguments) != 1) {
+    if (!is.logical(check_arguments) || length(check_arguments) != 1) {
       error_message(
         "check_arguments must be TRUE or FALSE",
         check_arguments,
@@ -497,6 +483,7 @@ check_divent_args <- function(
   }
   # correction is checked by match.arg()
   # coverage_estimator is checked by match.arg()
+  # entropy_estimator is checked by match.arg()
   # estimator is checked by match.arg()
   # distances
   if (!is.na(names(args["distances"]))) {
@@ -537,7 +524,7 @@ check_divent_args <- function(
           parent_function
         )
       }
-      if (any(diag(distances != 0))) {
+      if (any(diag(distances) != 0)) {
         error_message(
           "distances must be zero between a species and itself",
           distances,
@@ -551,7 +538,7 @@ check_divent_args <- function(
   if (!is.na(names(args["fisher_alpha"]))) {
     fisher_alpha <- eval(expression(fisher_alpha), parent.frame())
     if (!is.null(fisher_alpha)) {
-      if (!is.numeric(fisher_alpha) | length(fisher_alpha) != 1) {
+      if (!is.numeric(fisher_alpha) || length(fisher_alpha) != 1) {
         error_message(
           "fisher_alpha must be a number.",
           fisher_alpha,
@@ -570,7 +557,7 @@ check_divent_args <- function(
   # gamma
   if (!is.na(names(args["gamma"]))) {
     gamma <- eval(expression(gamma), parent.frame())
-    if (!is.logical(gamma) | length(gamma) != 1) {
+    if (!is.logical(gamma) || length(gamma) != 1) {
       error_message(
         "gamma must be TRUE or FALSE",
         gamma,
@@ -581,7 +568,7 @@ check_divent_args <- function(
   # global
   if (!is.na(names(args["global"]))) {
     global <- eval(expression(global), parent.frame())
-    if (!is.logical(global) | length(global) != 1) {
+    if (!is.logical(global) || length(global) != 1) {
       error_message(
         "global must be TRUE or FALSE",
         global,
@@ -592,14 +579,14 @@ check_divent_args <- function(
   # jack_alpha
   if (!is.na(names(args["jack_alpha"]))) {
     jack_alpha <- eval(expression(jack_alpha), parent.frame())
-    if (!is.numeric(jack_alpha) | length(jack_alpha) != 1) {
+    if (!is.numeric(jack_alpha) || length(jack_alpha) != 1) {
       error_message(
         "jack_alpha must be a number.",
         jack_alpha,
         parent_function
       )
     }
-    if (any(jack_alpha <= 0) | any(jack_alpha >= 1)) {
+    if (any(jack_alpha <= 0 | jack_alpha >= 1)) {
       error_message(
         "jack_alpha must be between 0 and 1",
         jack_alpha,
@@ -610,14 +597,14 @@ check_divent_args <- function(
   # jack_max
   if (!is.na(names(args["jack_max"]))) {
     jack_max <- eval(expression(jack_max), parent.frame())
-    if (!is.numeric(jack_max) | length(jack_max) != 1) {
+    if (!is.numeric(jack_max) || length(jack_max) != 1) {
       error_message(
         "jack_max must be a number.",
         jack_max,
         parent_function
       )
     }
-    if (any(jack_max < 1) | any(jack_max > 10)) {
+    if (any(jack_max < 1 | jack_max > 10)) {
       error_message(
         "jack_max must be between 1 and 10",
         jack_max,
@@ -628,7 +615,7 @@ check_divent_args <- function(
   # k
   if (!is.na(names(args["k"]))) {
     k <- eval(expression(k), parent.frame())
-    if (!is.numeric(k) | length(k) != 1) {
+    if (!is.numeric(k) || length(k) != 1) {
       error_message(
         "k must be a number.",
         k,
@@ -642,7 +629,7 @@ check_divent_args <- function(
         parent_function
       )
     }
-    if (any(!is_integer_values(k))) {
+    if (!is_integer_values(k)) {
       error_message(
         "k must be an integer",
         k,
@@ -654,7 +641,7 @@ check_divent_args <- function(
   if (!is.na(names(args["level"]))) {
     level <- eval(expression(level), parent.frame())
     if (!is.null(level)) {
-      if (!is.numeric(level) | length(level) != 1) {
+      if (!is.numeric(level) || length(level) != 1) {
         error_message(
           "level must be a number.",
           level,
@@ -674,7 +661,7 @@ check_divent_args <- function(
   if (!is.na(names(args["n"]))) {
     n <- eval(expression(n), parent.frame())
     if (!is.null(n)) {
-      if (!is.numeric(n) | length(n) != 1) {
+      if (!is.numeric(n) || length(n) != 1) {
         error_message(
           "n must be a number.",
           n,
@@ -693,7 +680,7 @@ check_divent_args <- function(
   # n_simulations
   if (!is.na(names(args["n_simulations"]))) {
     n_simulations <- eval(expression(n_simulations), parent.frame())
-    if (!is.numeric(n_simulations) | length(n_simulations) != 1) {
+    if (!is.numeric(n_simulations) || length(n_simulations) != 1) {
       error_message(
         "n_simulations must be a number.",
         n_simulations,
@@ -711,7 +698,7 @@ check_divent_args <- function(
   # normalize
   if (!is.na(names(args["normalize"]))) {
     normalize <- eval(expression(normalize), parent.frame())
-    if (!is.logical(normalize) | length(normalize) != 1) {
+    if (!is.logical(normalize) || length(normalize) != 1) {
       error_message(
         "normalize must be TRUE or FALSE",
         normalize,
@@ -764,14 +751,14 @@ check_divent_args <- function(
   if (!is.na(names(args["prob_geom"]))) {
     prob_geom <- eval(expression(prob_geom), parent.frame())
     if (!is.null(prob_geom)) {
-      if (!is.numeric(prob_geom) | length(prob_geom) != 1) {
+      if (!is.numeric(prob_geom) || length(prob_geom) != 1) {
         error_message(
           "prob_geom must be a number.",
           prob_geom,
           parent_function
         )
       }
-      if (any(prob_geom < 0) | any(prob_geom > 1)) {
+      if (any(prob_geom < 0 | prob_geom > 1)) {
         error_message(
           "prob_geom must be between 0 and 1",
           prob_geom,
@@ -784,7 +771,7 @@ check_divent_args <- function(
   # q
   if (!is.na(names(args["q"]))) {
     q <- eval(expression(q), parent.frame())
-    if (!is.numeric(q) | length(q) != 1) {
+    if (!is.numeric(q) || length(q) != 1) {
       error_message(
         "q must be a number.",
         q,
@@ -795,7 +782,7 @@ check_divent_args <- function(
   # q_threshold
   if (!is.na(names(args["q_threshold"]))) {
     q_threshold <- eval(expression(q_threshold), parent.frame())
-    if (!is.numeric(q_threshold) | length(q_threshold) != 1) {
+    if (!is.numeric(q_threshold) || length(q_threshold) != 1) {
       error_message(
         "q_threshold must be a number.",
         q_threshold,
@@ -809,7 +796,7 @@ check_divent_args <- function(
         parent_function
       )
     }
-    if (any(!is_integer_values(q_threshold))) {
+    if (!is_integer_values(q_threshold)) {
       error_message(
         "q_threshold must be an integer",
         q_threshold,
@@ -855,7 +842,7 @@ check_divent_args <- function(
   if (!is.na(names(args["rate"]))) {
     rate <- eval(expression(rate), parent.frame())
     if (!is.null(rate)) {
-      if (!is.numeric(rate) | length(rate) != 1) {
+      if (!is.numeric(rate) || length(rate) != 1) {
         error_message(
           "rate must be a number.",
           rate,
@@ -875,14 +862,14 @@ check_divent_args <- function(
   if (!is.na(names(args["sample_coverage"]))) {
     sample_coverage <- eval(expression(sample_coverage), parent.frame())
     if (!is.null(sample_coverage)) {
-      if (!is.numeric(sample_coverage) | length(sample_coverage) != 1) {
+      if (!is.numeric(sample_coverage) || length(sample_coverage) != 1) {
         error_message(
           "sample_coverage must be a number.",
           sample_coverage,
           parent_function
         )
       }
-      if (any(sample_coverage <= 0) | any(sample_coverage >= 1)) {
+      if (any(sample_coverage <= 0 | sample_coverage >= 1)) {
         error_message(
           "sample_coverage must be between 0 and 1",
           sample_coverage,
@@ -895,7 +882,7 @@ check_divent_args <- function(
   if (!is.na(names(args["sd_lnorm"]))) {
     sd_lnorm <- eval(expression(sd_lnorm), parent.frame())
     if (!is.null(sd_lnorm)) {
-      if (!is.numeric(sd_lnorm) | length(sd_lnorm) != 1) {
+      if (!is.numeric(sd_lnorm) || length(sd_lnorm) != 1) {
         error_message(
           "sd_lnorm must be a number.",
           sd_lnorm,
@@ -914,7 +901,7 @@ check_divent_args <- function(
   # show_progress
   if (!is.na(names(args["show_progress"]))) {
     show_progress <- eval(expression(show_progress), parent.frame())
-    if (!is.logical(show_progress) | length(show_progress) != 1) {
+    if (!is.logical(show_progress) || length(show_progress) != 1) {
       error_message(
         "show_progress must be TRUE or FALSE",
         show_progress,
@@ -953,7 +940,7 @@ check_divent_args <- function(
         parent_function
       )
     }
-    if (any(diag(similarities != 1))) {
+    if (any(diag(similarities) != 1)) {
       error_message(
         "similarities must be 1 between a species and itself",
         similarities,
@@ -965,7 +952,7 @@ check_divent_args <- function(
   if (!is.na(names(args["size"]))) {
     size <- eval(expression(size), parent.frame())
     if (!is.null(size)) {
-      if (!is.numeric(size) | length(size) != 1) {
+      if (!is.numeric(size) || length(size) != 1) {
         error_message(
           "size must be a number.",
           size,
@@ -983,7 +970,10 @@ check_divent_args <- function(
   }
   # species_distribution
   if (!is.na(names(args["species_distribution"]))) {
-    species_distribution <- eval(expression(species_distribution), parent.frame())
+    species_distribution <- eval(
+      expression(species_distribution),
+      parent.frame()
+    )
     if (!is_species_distribution(species_distribution)) {
       error_message(
         "species_distribution must be an object of class 'species_distribution'",
@@ -996,7 +986,7 @@ check_divent_args <- function(
   if (!is.na(names(args["species_number"]))) {
     species_number <- eval(expression(species_number), parent.frame())
     if (!is.null(species_number)) {
-      if (!is.numeric(species_number) | length(species_number) != 1) {
+      if (!is.numeric(species_number) || length(species_number) != 1) {
         error_message(
           "species_number must be a number.",
           species_number,
@@ -1016,7 +1006,7 @@ check_divent_args <- function(
   if (!is.na(names(args["thomas_mu"]))) {
     thomas_mu <- eval(expression(thomas_mu), parent.frame())
     if (!is.null(thomas_mu)) {
-      if (!is.numeric(thomas_mu) | length(thomas_mu) != 1) {
+      if (!is.numeric(thomas_mu) || length(thomas_mu) != 1) {
         error_message(
           "thomas_mu must be a number.",
           thomas_mu,
@@ -1036,7 +1026,7 @@ check_divent_args <- function(
   if (!is.na(names(args["thomas_scale"]))) {
     thomas_scale <- eval(expression(thomas_scale), parent.frame())
     if (!is.null(thomas_scale)) {
-      if (!is.numeric(thomas_scale) | length(thomas_scale) != 1) {
+      if (!is.numeric(thomas_scale) || length(thomas_scale) != 1) {
         error_message(
           "thomas_scale must be a number.",
           thomas_scale,
@@ -1057,10 +1047,11 @@ check_divent_args <- function(
     tree <- eval(expression(tree), parent.frame())
     if (!is.null(tree)) {
       if (
-        !inherits(tree, "phylo_divent") &
-        !inherits(tree, "phylo") &
-        !inherits(tree, "phylog") &
-        !inherits(tree, "hclust")) {
+        !inherits(tree, "phylo_divent") &&
+          !inherits(tree, "phylo") &&
+          !inherits(tree, "phylog") &&
+          !inherits(tree, "hclust")
+      ) {
         error_message(
           "tree must be an object of class 'phylo_divent', 'phylo', 'phylog' or 'hclust'",
           tree,
@@ -1094,7 +1085,7 @@ check_divent_args <- function(
   if (!is.na(names(args["w_max"]))) {
     w_max <- eval(expression(w_max), parent.frame())
     if (!is.null(w_max)) {
-      if (!is.numeric(w_max) | length(w_max) != 1) {
+      if (!is.numeric(w_max) || length(w_max) != 1) {
         error_message(
           "w_max must be a number.",
           w_max,
@@ -1114,7 +1105,7 @@ check_divent_args <- function(
   if (!is.na(names(args["w_mean"]))) {
     w_mean <- eval(expression(w_mean), parent.frame())
     if (!is.null(w_mean)) {
-      if (!is.numeric(w_mean) | length(w_mean) != 1) {
+      if (!is.numeric(w_mean) || length(w_mean) != 1) {
         error_message(
           "w_mean must be a number.",
           w_mean,
@@ -1134,7 +1125,7 @@ check_divent_args <- function(
   if (!is.na(names(args["w_min"]))) {
     w_min <- eval(expression(w_min), parent.frame())
     if (!is.null(w_min)) {
-      if (!is.numeric(w_min) | length(w_min) != 1) {
+      if (!is.numeric(w_min) || length(w_min) != 1) {
         error_message(
           "w_min must be a number.",
           w_min,
@@ -1154,7 +1145,7 @@ check_divent_args <- function(
   if (!is.na(names(args["weibull_scale"]))) {
     weibull_scale <- eval(expression(weibull_scale), parent.frame())
     if (!is.null(weibull_scale)) {
-      if (!is.numeric(weibull_scale) | length(weibull_scale) != 1) {
+      if (!is.numeric(weibull_scale) || length(weibull_scale) != 1) {
         error_message(
           "weibull_scale must be a number.",
           weibull_scale,
@@ -1174,7 +1165,7 @@ check_divent_args <- function(
   if (!is.na(names(args["weibull_shape"]))) {
     weibull_shape <- eval(expression(weibull_shape), parent.frame())
     if (!is.null(weibull_shape)) {
-      if (!is.numeric(weibull_shape) | length(weibull_shape) != 1) {
+      if (!is.numeric(weibull_shape) || length(weibull_shape) != 1) {
         error_message(
           "weibull_shape must be a number.",
           weibull_shape,
@@ -1238,7 +1229,6 @@ check_divent_args <- function(
 #' @noRd
 #'
 chao_A <- function(abd) {
-
   # Calculate abundance distribution
   abd_distribution <- tapply(abd, INDEX = abd, FUN = length)
   s_1 <- as.numeric(abd_distribution["1"])
@@ -1276,23 +1266,34 @@ chao_A <- function(abd) {
 #' @noRd
 #'
 checked_matrix <- function(
-    sim_dist_matrix,
-    species_distribution) {
-
+  sim_dist_matrix,
+  species_distribution
+) {
+  # Standardize the data to simplify the tests
   if (inherits(sim_dist_matrix, "dist")) {
     # dist objects are supported but the remainder assumes a matrix
     sim_dist_matrix <- as.matrix(sim_dist_matrix)
   }
+  if (!is_species_distribution(species_distribution)) {
+    # species_distribution objects and abundance vectors are supported,
+    # but the remainder assumes a species_distribution
+    species_distribution <- as_species_distribution(species_distribution)
+  }
+  # Stop if empty data
+  if (length(sim_dist_matrix) == 0) {
+    cli::cli_abort("The silimarity matrix is empty")
+  }
+  # Get the distribution species names
+  col_names <- colnames(species_distribution)
+  species_names <- col_names[!col_names %in% non_species_columns]
+  if (length(species_names) == 0) {
+    cli::cli_abort("The distribution contains no species")
+  }
 
-  # No names needed
-  if (
-    # No names in the matrix
-    is.null(colnames(sim_dist_matrix)) |
-    # No names in the distribution that may be a tibble or a vector
-    (is.null(colnames(species_distribution)) & is.null(names(species_distribution)))
-  ) {
-    # The matrix may not be named
-    if (ncol(sim_dist_matrix) == length(species_distribution)) {
+  # No names in the matrix
+  if (is.null(colnames(sim_dist_matrix))) {
+    # Then, sizes must match
+    if (ncol(sim_dist_matrix) == length(species_names)) {
       # Do not change the matrix
       return(sim_dist_matrix)
     } else {
@@ -1305,18 +1306,8 @@ checked_matrix <- function(
     }
   }
 
-  # Get species names
-  if (is_species_distribution(species_distribution)) {
-    is_species_column <- !colnames(species_distribution) %in% non_species_columns
-    species_names <- colnames(species_distribution)[is_species_column]
-  } else if (is.vector(species_distribution)) {
-    species_names <- names(species_distribution)
-  }
-
-  # Stop if some species are not in the matrix
-  if (length(species_names) == 0) {
-    cli::cli_abort("There are no species in the distribution")
-  }
+  # If the matrix is named, then
+  # all species of the distribution must be in the matrix
   if (length(setdiff(species_names, colnames(sim_dist_matrix))) != 0) {
     cli::cli_abort("Some species are missing in the similarity matrix.")
   }
@@ -1345,34 +1336,34 @@ checked_matrix <- function(
 #' @noRd
 #'
 ent_gamma_tsallis <- function(
-    species_distribution,
-    q,
-    estimator,
-    level,
-    probability_estimator,
-    unveiling,
-    richness_estimator,
-    jack_alpha,
-    jack_max,
-    coverage_estimator,
-    as_numeric) {
-
+  species_distribution,
+  q,
+  estimator,
+  level,
+  probability_estimator,
+  unveiling,
+  richness_estimator,
+  jack_alpha,
+  jack_max,
+  coverage_estimator,
+  as_numeric
+) {
   # Build the metacommunity
-  abd <- metacommunity.abundances(
+  abundances <- metacommunity(
     species_distribution,
     as_numeric = TRUE,
     check_arguments = FALSE
   )
-  if (is_integer_values(abd)) {
+  if (is_integer_values(abundances)) {
     # Sample coverage is useless
     sample_coverage <- NULL
   } else {
     # Non-integer values in the metacommunity.
     # Calculate the sample coverage and change the estimator.
-    sample_coverage <- coverage.numeric(
+    sample_coverage <- coverage(
       colSums(
-        species_distribution[
-          , !colnames(species_distribution) %in% non_species_columns
+        species_distribution[,
+          !colnames(species_distribution) %in% non_species_columns
         ]
       ),
       estimator = coverage_estimator,
@@ -1386,11 +1377,14 @@ ent_gamma_tsallis <- function(
 
   # Compute the entropy. Call the appropriate function for its estimators.
   # Richness estimators are specific
-  if (q == 0 & estimator %in% c("jackknife", "iChao1", "Chao1", "rarefy", "naive")) {
-    the_diversity <- div_richness.numeric(
-      abd,
+  if (
+    q == 0 &&
+      estimator %in% c("jackknife", "iChao1", "Chao1", "rarefy", "naive")
+  ) {
+    the_diversity <- div_richness(
+      abundances,
       estimator = estimator,
-      jack_alpha  = jack_alpha,
+      jack_alpha = jack_alpha,
       jack_max = jack_max,
       level = level,
       probability_estimator = probability_estimator,
@@ -1409,46 +1403,46 @@ ent_gamma_tsallis <- function(
     if (as_numeric) {
       the_entropy <- the_entropy$entropy
     }
-  } else if (q == 1 & is.null(sample_coverage)) {
+  } else if (q == 1 && is.null(sample_coverage)) {
     # Non-integer values in the metacommunity are supported only by ent_tsallis
-    the_entropy <- ent_shannon.numeric(
-      abd,
+    the_entropy <- ent_shannon(
+      abundances,
       estimator = estimator,
       level = level,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
       richness_estimator = richness_estimator,
-      jack_alpha  = jack_alpha,
+      jack_alpha = jack_alpha,
       jack_max = jack_max,
       coverage_estimator = coverage_estimator,
       as_numeric = as_numeric,
       check_arguments = FALSE
     )
-  } else if (q == 2 & is.null(sample_coverage)) {
+  } else if (q == 2 && is.null(sample_coverage)) {
     # Non-integer values in the metacommunity are supported only by ent_tsallis
-    the_entropy <- ent_simpson.numeric(
-      abd,
+    the_entropy <- ent_simpson(
+      abundances,
       estimator = estimator,
       level = level,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
       richness_estimator = richness_estimator,
-      jack_alpha  = jack_alpha,
+      jack_alpha = jack_alpha,
       jack_max = jack_max,
       coverage_estimator = coverage_estimator,
       as_numeric = as_numeric,
       check_arguments = FALSE
     )
   } else {
-    the_entropy <- ent_tsallis.numeric(
-      abd,
+    the_entropy <- ent_tsallis(
+      abundances,
       q = q,
       estimator = estimator,
       level = level,
       probability_estimator = probability_estimator,
       unveiling = unveiling,
       richness_estimator = richness_estimator,
-      jack_alpha  = jack_alpha,
+      jack_alpha = jack_alpha,
       jack_max = jack_max,
       sample_coverage = sample_coverage,
       as_numeric = as_numeric,
@@ -1526,11 +1520,11 @@ is_integer_values <- function(x) {
 #' @noRd
 #'
 phylo_abd <- function(
-    abundances,
-    tree) {
-
+  abundances,
+  tree
+) {
   # Calculate abundances along the tree, that are a list of matrices
-  sapply(
+  lapply(
     # Each phylogenetic group yields an item of the list
     colnames(tree$phylo_groups),
     function(group) {
@@ -1548,7 +1542,6 @@ phylo_abd <- function(
           )
         }
       )
-    },
-    simplify = FALSE
+    }
   )
 }

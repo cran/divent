@@ -55,16 +55,16 @@ ent_gen_simpson <- function(x, ...) {
 #'
 #' @export
 ent_gen_simpson.numeric <- function(
-    x,
-    k = 1,
-    estimator = c("Zhang", "naive"),
-    as_numeric  = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  k = 1,
+  estimator = c("Zhang", "naive"),
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   estimator <- match.arg(estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -72,7 +72,8 @@ ent_gen_simpson.numeric <- function(
   }
 
   # Entropy of a vector of probabilities ----
-  if (abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
+  # More than one value and their sum equal to 1
+  if (sum(x > 0) > 1 && abs(sum(x) - 1) < length(x) * .Machine$double.eps) {
     # Probabilities sum to 1, allowing rounding error
     the_entropy <- sum(x * (1 - x)^k)
     if (as_numeric) {
@@ -113,17 +114,17 @@ ent_gen_simpson.numeric <- function(
 #'
 #' @export
 ent_gen_simpson.species_distribution <- function(
-    x,
-    k = 1,
-    estimator = c("Zhang", "naive"),
-    gamma = FALSE,
-    as_numeric = FALSE,
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  k = 1,
+  estimator = c("Zhang", "naive"),
+  gamma = FALSE,
+  as_numeric = FALSE,
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   estimator <- match.arg(estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -132,8 +133,8 @@ ent_gen_simpson.species_distribution <- function(
 
   if (gamma) {
     # Build the metacommunity
-    abd <- metacommunity.abundances(x, as_numeric = TRUE, check_arguments = FALSE)
-    if (estimator != "naive" & !is_integer_values(abd)) {
+    abundances <- metacommunity(x, as_numeric = TRUE, check_arguments = FALSE)
+    if (estimator != "naive" && !is_integer_values(abundances)) {
       cli::cli_abort(
         paste(
           "The weights of communities yield non-integer abundances in",
@@ -142,8 +143,8 @@ ent_gen_simpson.species_distribution <- function(
       )
     }
     return(
-      ent_gen_simpson.numeric(
-        x = abd,
+      ent_gen_simpson(
+        x = abundances,
         k = k,
         estimator = estimator,
         as_numeric = as_numeric,
@@ -157,7 +158,7 @@ ent_gen_simpson.species_distribution <- function(
       x[, !colnames(x) %in% non_species_columns],
       # Apply to each row
       MARGIN = 1,
-      FUN = ent_gen_simpson.numeric,
+      FUN = ent_gen_simpson,
       # Arguments
       k = k,
       estimator = estimator,
@@ -173,7 +174,7 @@ ent_gen_simpson.species_distribution <- function(
           # Restore non-species columns
           x[colnames(x) %in% non_species_columns],
           # Coerce the list returned by apply into a dataframe
-          do.call(rbind.data.frame, ent_simpson_sites)
+          dplyr::bind_rows(ent_simpson_sites)
         )
       )
     }

@@ -20,17 +20,17 @@
 #' # Diversity profile curve
 #' autoplot(profile_hill(mock_3sp_abd))
 #'
-autoplot.profile <-  function(
-    object,
-    ...,
-    main = NULL,
-    xlab = "Order of Diversity",
-    ylab = "Diversity",
-    shade_color = "grey75",
-    alpha = 0.3,
-    lty = 1,
-    lwd = 0.5){
-
+autoplot.profile <- function(
+  object,
+  ...,
+  main = NULL,
+  xlab = "Order of Diversity",
+  ylab = "Diversity",
+  shade_color = "grey75",
+  alpha = 0.3,
+  lty = 1,
+  lwd = 0.5
+) {
   # Add a site column if needed
   if (!"site" %in% colnames(object)) {
     object <- dplyr::mutate(object, site = "Unique site")
@@ -47,7 +47,7 @@ autoplot.profile <-  function(
   )
 
   # Confidence envelope
-  if ("sup" %in% colnames(object) & "inf" %in% colnames(object)) {
+  if ("sup" %in% colnames(object) && "inf" %in% colnames(object)) {
     the_plot <- the_plot +
       ggplot2::geom_ribbon(
         ggplot2::aes(

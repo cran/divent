@@ -23,11 +23,14 @@ NULL
 #'
 #' @export
 abd_species <- function(
-    abundances,
-    check_arguments = TRUE) {
+  abundances,
+  check_arguments = TRUE
+) {
+  if (check_arguments) {
+    check_divent_args()
+  }
 
-  if (any(check_arguments)) check_divent_args()
-
+  # Keep species columns only
   return(
     abundances[, !colnames(abundances) %in% non_species_columns]
   )
@@ -38,12 +41,15 @@ abd_species <- function(
 #'
 #' @export
 abd_sum <- function(
-    abundances,
-    as_numeric = FALSE,
-    check_arguments = TRUE) {
+  abundances,
+  as_numeric = FALSE,
+  check_arguments = TRUE
+) {
+  if (check_arguments) {
+    check_divent_args()
+  }
 
-  if (any(check_arguments)) check_divent_args()
-
+  # Keep species columns only
   the_abd_sum <- rowSums(
     abundances[, !colnames(abundances) %in% non_species_columns]
   )
@@ -66,24 +72,21 @@ abd_sum <- function(
 #'
 #' @export
 prob_species <- function(
-    species_distribution,
-    check_arguments = TRUE) {
+  species_distribution,
+  check_arguments = TRUE
+) {
+  if (check_arguments) {
+    check_divent_args()
+  }
 
-  if (any(check_arguments)) check_divent_args()
-
-  abundances <- species_distribution[
-    ,
+  # Keep species columns only
+  the_abundances <- species_distribution[,
     !colnames(species_distribution) %in% non_species_columns
   ]
-  sample_sizes <- rowSums(abundances)
-  # Divide each column by sample_sizes
-  return(
-    dplyr::mutate(
-      abundances,
-      dplyr::across(
-        dplyr::everything(),
-        ~ .x / sample_sizes
-      )
-    )
-  )
+  sample_sizes <- rowSums(the_abundances)
+  # Divide each column by sample_sizes. Restore tibble class.
+  the_abundances <- tibble::as_tibble(the_abundances / sample_sizes)
+  class(the_abundances) <- class(species_distribution)
+
+  return(the_abundances)
 }

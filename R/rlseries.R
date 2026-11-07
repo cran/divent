@@ -30,11 +30,12 @@
 #' # rcommunity() may be a better choice here
 #' autoplot(rcommunity(1, size = 1E4, fisher_alpha = 40, distribution = "lseries"))
 rlseries <- function(
-    n,
-    size,
-    fisher_alpha,
-    show_progress = TRUE,
-    check_arguments = TRUE) {
+  n,
+  size,
+  fisher_alpha,
+  show_progress = TRUE,
+  check_arguments = TRUE
+) {
   # adapted from Dan Lunn, http://www.stats.ox.ac.uk/~dlunn/BS1_05/BS1_Rcode.pdf
   # Uncomment to limit to integer value
   # if (size + 1 == size || size - 1 == size) {
@@ -47,7 +48,7 @@ rlseries <- function(
   # Prepare the corresponding number of abundances
   abd <- numeric(n)
   # Prepare a progress bar
-  if (show_progress & interactive()) {
+  if (show_progress && interactive()) {
     cli::cli_progress_bar(
       total = as.integer(n),
       format = "{cli::pb_spin} Drawing log-series values {cli::pb_current}/{cli::pb_total}"
@@ -60,25 +61,27 @@ rlseries <- function(
   # Calculate the probability at k=1
   P <- -x / log(1 - x)
   # Store it in the cumulative function
-  F <- P
+  F_k <- P
   # Repeat while all values are not drawn
   while (next_value <= n) {
-    if (F > u[next_value]) {
+    if (F_k > u[next_value]) {
       # Retain k as the next value
       abd[next_value] <- k
       # Increment the next value
       next_value <- next_value + 1
       # Update the progress bar
-      if (show_progress & interactive()) cli::cli_progress_update()
+      if (show_progress && interactive()) cli::cli_progress_update()
     } else {
       # Probability at k+1 obtained from that at k
       P <- P * k * x / (k + 1)
       # Increment the cumulated probability
-      F <- F + P
+      F_k <- F_k + P
       # Increment k
       k <- k + 1
     }
   }
-  if (show_progress & interactive()) cli::cli_progress_done()
+  if (show_progress && interactive()) {
+    cli::cli_progress_done()
+  }
   return(abd)
 }

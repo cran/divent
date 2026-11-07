@@ -40,14 +40,14 @@ fit_rac <- function(x, ...) {
 #'
 #' @export
 fit_rac.numeric <- function(
-    x,
-    distribution = c("lnorm", "lseries", "geom", "bstick"),
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  distribution = c("lnorm", "lseries", "geom", "bstick"),
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   distribution <- match.arg(distribution)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -86,7 +86,7 @@ fit_rac.numeric <- function(
     # Evaluate alpha
     alpha <- vegan::fisher.alpha(abd)
     # May (1975) Ecology and Evolution of Communities, Harvard University Press.
-    sei <- function(t) exp(-t)/t
+    sei <- function(t) exp(-t) / t
     rank <- vapply(
       nu,
       function(x) {
@@ -151,14 +151,14 @@ fit_rac.numeric <- function(
 #'
 #' @export
 fit_rac.species_distribution <- function(
-    x,
-    distribution = c("lnorm", "lseries", "geom", "bstick"),
-    ...,
-    check_arguments = TRUE) {
-
+  x,
+  distribution = c("lnorm", "lseries", "geom", "bstick"),
+  ...,
+  check_arguments = TRUE
+) {
   # Check arguments
   distribution <- match.arg(distribution)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
     if (any(x < 0)) {
       cli::cli_abort("Species probabilities or abundances must be positive.")
@@ -171,7 +171,7 @@ fit_rac.species_distribution <- function(
     x[, !colnames(x) %in% non_species_columns],
     # Apply to each row
     MARGIN = 1,
-    FUN = fit_rac.numeric,
+    FUN = fit_rac,
     # Arguments
     distribution = distribution,
     check_arguments = FALSE

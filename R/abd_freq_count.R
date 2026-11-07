@@ -30,31 +30,31 @@
 #' @examples
 #' abd_freq_count(as.numeric(paracou_6_abd[1, ]))
 abd_freq_count <- function(
-    abd,
-    level = NULL,
-    probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
-    unveiling = c("geometric", "uniform", "none"),
-    richness_estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
-    jack_alpha = 0.05,
-    jack_max = 10,
-    coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
-    check_arguments = TRUE) {
-
+  abd,
+  level = NULL,
+  probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
+  unveiling = c("geometric", "uniform", "none"),
+  richness_estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
+  jack_alpha = 0.05,
+  jack_max = 10,
+  coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  check_arguments = TRUE
+) {
   # Check arguments
   probability_estimator <- match.arg(probability_estimator)
   unveiling <- match.arg(unveiling)
   richness_estimator <- match.arg(richness_estimator)
   coverage_estimator <- match.arg(coverage_estimator)
-  if (any(check_arguments)) check_divent_args()
+  if (check_arguments) {
+    check_divent_args()
+  }
 
   # Convert to integer values
   if (length(abd) == 0) {
     # abd may contain no species. Return NA.
     return(NA)
-  } else {
-    abd_int <- round(abd)
   }
-  if (any(abs(abd_int - abd) > 2 * .Machine$double.eps)) {
+  if (!is_integer_values(abd)) {
     cli::cli_alert_warning(
       "The abundance frequency count requires integer abundances."
     )
@@ -62,28 +62,29 @@ abd_freq_count <- function(
       "Abundances have been rounded."
     )
   }
-
+  abd_int <- round(abd)
   # Eliminate 0
   abd_int <- abd_int[abd_int > 0]
+
   # Calculate abundance distribution
-  abd_distribution <- tapply(abd_int, INDEX = abd_int, FUN = length)
+  abd_distribution <- table(abd_int)
 
   if (is.null(level)) {
     # No extrapolation. Prepare a two-column matrix ----
     return(
       tibble::tibble(
-        abundance = as.numeric(names(abd_distribution)),
-        number_of_species = abd_distribution
+        abundance = as.integer(names(abd_distribution)),
+        number_of_species = as.integer(abd_distribution)
       )
     )
   } else {
     # If level is coverage, get size
     if (level < 1) {
-      level <- coverage_to_size.numeric(
+      level <- coverage_to_size(
         abd,
         sample_coverage = level,
         estimator = coverage_estimator,
-        as_numeric  = TRUE,
+        as_numeric = TRUE,
         check_arguments = FALSE
       )
     }
@@ -96,8 +97,8 @@ abd_freq_count <- function(
           sum(
             exp(
               lchoose(abd_int, nu) +
-              lchoose(sample_size - abd_int, level - nu) -
-              lchoose(sample_size, level)
+                lchoose(sample_size - abd_int, level - nu) -
+                lchoose(sample_size, level)
             )
           )
         },
@@ -110,14 +111,15 @@ abd_freq_count <- function(
         s_nu <- c(rep(0, level - 1), 1)
       } else {
         # Unveil the full distribution
-        prob_s_0 <- probabilities.numeric(
+        prob_s_0 <- probabilities(
           abd_int,
           estimator = probability_estimator,
           unveiling = unveiling,
           richness_estimator = richness_estimator,
           jack_alpha = jack_alpha,
           jack_max = jack_max,
-          check_arguments = TRUE
+          as_numeric = TRUE,
+          check_arguments = FALSE
         )
         # Extrapolate
         s_nu <- vapply(
@@ -126,8 +128,8 @@ abd_freq_count <- function(
             sum(
               exp(
                 lchoose(level, nu) +
-                nu * log(prob_s_0) +
-                (level - nu) * log(1 - prob_s_0)
+                  nu * log(prob_s_0) +
+                  (level - nu) * log(1 - prob_s_0)
               )
             )
           },
@@ -139,7 +141,8 @@ abd_freq_count <- function(
     return(
       tibble::tibble(
         abundance = seq_len(level),
-        number_of_species = s_nu)
+        number_of_species = s_nu
+      )
     )
   }
 }

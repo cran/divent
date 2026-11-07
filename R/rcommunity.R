@@ -64,26 +64,26 @@ NULL
 #'   species_number = 300, distribution = "lnorm")
 #' autoplot(abundances)
 rcommunity <- function(
-    n,
-    size = sum(abd),
-    prob = NULL,
-    abd = NULL,
-    bootstrap = c("Chao2015", "Marcon2012", "Chao2013"),
-    species_number = 300,
-    distribution = c("lnorm", "lseries", "geom", "bstick"),
-    sd_lnorm = 1,
-    prob_geom = 0.1,
-    fisher_alpha = 40,
-    coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
-    check_arguments = TRUE) {
-
+  n,
+  size = sum(abd),
+  prob = NULL,
+  abd = NULL,
+  bootstrap = c("Chao2015", "Marcon2012", "Chao2013"),
+  species_number = 300,
+  distribution = c("lnorm", "lseries", "geom", "bstick"),
+  sd_lnorm = 1,
+  prob_geom = 0.1,
+  fisher_alpha = 40,
+  coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  check_arguments = TRUE
+) {
   # Check arguments
   bootstrap <- match.arg(bootstrap)
   distribution <- match.arg(distribution)
   coverage_estimator <- match.arg(coverage_estimator)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
-    if (!is.null(prob) & !is.null(abd)) {
+    if (!is.null(prob) && !is.null(abd)) {
       cli::cli_abort("{.code prob} and {.code abd} can't be both given.")
     }
   }
@@ -91,24 +91,35 @@ rcommunity <- function(
   the_prob <- the_abd <- NULL
 
   # Generate a distribution (prob and abd are null) or use prob or build probabilities from abd
-  if (is.null(prob) & is.null(abd)) {
+  if (is.null(prob) && is.null(abd)) {
     # Draw in a distribution
     name <- distribution
     # Other distributions: draw probabilities
-    the_prob <- switch(distribution,
-      geom = prob_geom /
-        (1 - (1 - prob_geom) ^ species_number) * (1 - prob_geom) ^ (0:(species_number - 1)),
-      lnorm = (the_abd <- stats::rlnorm(species_number, meanlog = 0, sdlog = sd_lnorm)) /
-        sum(the_abd),
-      lseries = (
+    the_prob <- switch(
+      distribution,
+      geom = {
+        prob_geom /
+          (1 - (1 - prob_geom)^species_number) *
+          (1 - prob_geom)^(0:(species_number - 1))
+      },
+      lnorm = {
+        the_abd <- stats::rlnorm(species_number, meanlog = 0, sdlog = sd_lnorm)
+        the_abd / sum(the_abd)
+      },
+      lseries = {
+        species_number <- fisher_alpha * log(1 + size / fisher_alpha)
         the_abd <-
           rlseries(
-            species_number <- fisher_alpha * log(1 + size / fisher_alpha),
-            fisher_alpha = fisher_alpha,
-            size = size
+            species_number,
+            size = size,
+            fisher_alpha = fisher_alpha
           )
-        ) / sum(the_abd),
-      bstick = c(cuts <- sort(stats::runif(species_number - 1)), 1) - c(0, cuts)
+        the_abd / sum(the_abd)
+      },
+      bstick = {
+        cuts <- sort(stats::runif(species_number - 1))
+        c(cuts, 1) - c(0, cuts)
+      }
     )
   } else {
     # Simulation from a distribution
@@ -122,22 +133,24 @@ rcommunity <- function(
     # Subsample in given abundances.
     # Generate probabilities according to the chosen method.
     if (bootstrap == "Chao2015") {
-      the_prob <- probabilities.numeric(
+      the_prob <- probabilities(
         abd,
         estimator = "Chao2015",
         unveiling = "geometric",
         coverage_estimator = coverage_estimator,
         as_numeric = TRUE,
-        check_arguments = FALSE)
+        check_arguments = FALSE
+      )
     }
     if (bootstrap == "Chao2013") {
-      the_prob <- probabilities.numeric(
+      the_prob <- probabilities(
         abd,
         estimator = "Chao2013",
         unveiling = "uniform",
         coverage_estimator = coverage_estimator,
         as_numeric = TRUE,
-        check_arguments = FALSE)
+        check_arguments = FALSE
+      )
     }
     if (bootstrap == "Marcon2012") {
       the_prob <- abd / sum(abd)
@@ -149,7 +162,7 @@ rcommunity <- function(
   the_abd <- t(stats::rmultinom(n, size = size, prob = the_prob))
 
   return(
-    as_abundances.numeric(
+    as_abundances(
       the_abd,
       names = paste(
         name,
@@ -185,42 +198,42 @@ rcommunity <- function(
 #' autoplot(X)
 #'
 rspcommunity <- function(
-    n,
-    size = sum(abd),
-    prob = NULL,
-    abd = NULL,
-    bootstrap = c("Chao2015", "Marcon2012", "Chao2013"),
-    species_number = 300,
-    distribution = c("lnorm", "lseries", "geom", "bstick"),
-    sd_lnorm = 1,
-    prob_geom = 0.1,
-    fisher_alpha = 40,
-    coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
-    spatial = c("Binomial", "Thomas"),
-    thomas_scale = 0.2,
-    thomas_mu = 10,
-    win = spatstat.geom::owin(),
-    species_names = NULL,
-    weight_distribution = c("Uniform", "Weibull", "Exponential"),
-    w_min = 1,
-    w_max = 1,
-    w_mean = 15,
-    weibull_scale = 20,
-    weibull_shape = 2,
-    check_arguments = TRUE) {
-
+  n,
+  size = sum(abd),
+  prob = NULL,
+  abd = NULL,
+  bootstrap = c("Chao2015", "Marcon2012", "Chao2013"),
+  species_number = 300,
+  distribution = c("lnorm", "lseries", "geom", "bstick"),
+  sd_lnorm = 1,
+  prob_geom = 0.1,
+  fisher_alpha = 40,
+  coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  spatial = c("Binomial", "Thomas"),
+  thomas_scale = 0.2,
+  thomas_mu = 10,
+  win = spatstat.geom::owin(),
+  species_names = NULL,
+  weight_distribution = c("Uniform", "Weibull", "Exponential"),
+  w_min = 1,
+  w_max = 1,
+  w_mean = 15,
+  weibull_scale = 20,
+  weibull_shape = 2,
+  check_arguments = TRUE
+) {
   # Check arguments
   weight_distribution <- match.arg(weight_distribution)
   bootstrap <- match.arg(bootstrap)
   distribution <- match.arg(distribution)
   coverage_estimator <- match.arg(coverage_estimator)
   spatial <- match.arg(spatial)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
-    if (!is.null(prob) & !is.null(abd)) {
+    if (!is.null(prob) && !is.null(abd)) {
       cli::cli_abort("{.code prob} and {.code abd} can't be both given.")
     }
-    if (weight_distribution == "Uniform" & (w_min > w_max)) {
+    if (weight_distribution == "Uniform" && (w_min > w_max)) {
       # Check w_max only in uniform distributions
       cli::cli_abort("{.code w_max} must be greater of equal to {.code w_min}.")
     }
@@ -269,13 +282,11 @@ rspcommunity <- function(
     the_weights <- NULL
     if (weight_distribution == "Uniform") {
       the_weights <- stats::runif(size, min = w_min, max = w_max)
-    }
-    else if (weight_distribution == "Weibull") {
+    } else if (weight_distribution == "Weibull") {
       the_weights <- w_min +
         stats::rweibull(size, shape = weibull_shape, scale = weibull_scale)
-    }
-    else if (weight_distribution == "Exponential") {
-      the_weights <-  w_min +
+    } else if (weight_distribution == "Exponential") {
+      the_weights <- w_min +
         stats::rexp(size, rate = 1 / w_mean)
     }
     return(the_weights)
@@ -304,8 +315,7 @@ rspcommunity <- function(
     }
     # Loop to simulate several point processes
     the_wmppp_list <- lapply(1:n, FUN = rbinomial)
-  }
-  else if (spatial == "Thomas") {
+  } else if (spatial == "Thomas") {
     rthomas <- function(i) {
       # Prepare an empty point pattern
       the_ppp <- NULL
@@ -314,7 +324,8 @@ rspcommunity <- function(
         the_ppp_s <- spatstat.random::rThomas(
           kappa = as.numeric(
             the_communities[i, is_species_column][s] /
-            spatstat.geom::area.owin(win) / thomas_mu
+              spatstat.geom::area.owin(win) /
+              thomas_mu
           ),
           scale = thomas_scale,
           mu = thomas_mu,

@@ -6,6 +6,17 @@
 #' `accum_sp_hill()` or `accum_sp_tsallis()` estimate the diversity or entropy
 #' accumulation curve of a distribution.
 #'
+#' Argument `entropy_estimator` is used to estimate asymptotic entropy or diversity
+#' when argument `correction` is "extrapolation".
+#' Then, `richness_estimator` is used if needed to estimate entropy.
+#' If the jackknife is chosen, `jack_alpha` sets the uncertainty level that decides
+#' increasing the jackknife estimator order, and `jack_max` is the highest
+#' order allowed.
+#' If `entropy_estimator` is an unveiled one, then `probability_estimator` and
+#' `unveiling` define the method.
+#' `coverage_estimator` sets the estimator of sample coverage.
+#' In general, the default values of these arguments are a good choice.
+#'
 #' @inheritParams check_divent_args
 #'
 #' @name accum_sp_hill
@@ -15,11 +26,11 @@ NULL
 #' @rdname accum_sp_hill
 #'
 #' @export
-#' @param orders A numeric vector: the diversity orders to address. Default is 0.
-#' @param neighbors A vector of integers.
+#' @param orders a numeric vector: the diversity orders to address. Default is 0.
+#' @param neighbors a vector of integers.
 #' Entropy will be accumulated along this number of neighbors around each individual.
 #' Default is 10% of the individuals.
-#' @param r A vector of distances.
+#' @param r a vector of distances.
 #' If `NULL` accumulation is along `n`, else neighbors are accumulated in circles of radius `r`.
 #' @param correction The edge-effect correction to apply when estimating
 #' the entropy of a neighborhood community that does not fit in the window.
@@ -27,9 +38,11 @@ NULL
 #' Default is "none".
 #' "extrapolation" extrapolates the observed diversity up to the number of individuals
 #' estimated in the full area of the neighborhood, which is slow.
+#' @param entropy_estimator The asymptotic estimator of entropy
+#' when `correction` is "extrapolation".
 #' @param individual If `TRUE`, individual neighborhood entropies are returned.
 #'
-#' @return An [accum_sp] object, that is also either an [accum_sp_diversity],
+#' @return an [accum_sp] object, that is also either an [accum_sp_diversity],
 #' [accum_sp_entropy] or [accum_sp_mixing] object.
 #'
 #' @export
@@ -41,24 +54,44 @@ NULL
 #' accum_n <- accum_sp_hill(X)
 #' plot(accum_n, q = 0)
 #' # along distance
-#' accum_r <- accum_sp_hill(X, orders = 1, r = seq(0, .5, .05))
+#' accum_r <- accum_sp_hill(X, orders = 1, r = seq(0, 0.5, 0.05))
 #' autoplot(accum_r, q = 1)
 #'
 accum_sp_tsallis <- function(
-    X,
-    orders = 0,
-    neighbors = 1:ceiling(X$n / 2),
-    r = NULL,
-    correction = c("none", "extrapolation"),
-    richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    individual = FALSE,
-    show_progress = TRUE,
-    check_arguments = TRUE) {
-
+  X,
+  orders = 0,
+  neighbors = 1:ceiling(X$n / 2),
+  r = NULL,
+  correction = c("none", "extrapolation"),
+  entropy_estimator = c(
+    "UnveilJ",
+    "ChaoJost",
+    "ChaoShen",
+    "GenCov",
+    "Grassberger",
+    "Marcon",
+    "UnveilC",
+    "UnveiliC",
+    "ZhangGrabchak",
+    "naive",
+    "Bonachela",
+    "Holste"
+  ),
+  richness_estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
+  probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
+  unveiling = c("geometric", "uniform", "none"),
+  jack_alpha = 0.05,
+  jack_max = 10,
+  coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  individual = FALSE,
+  show_progress = TRUE,
+  check_arguments = TRUE
+) {
   # Check arguments
+  entropy_estimator <- match.arg(entropy_estimator)
   richness_estimator <- match.arg(richness_estimator)
   correction <- match.arg(correction)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
   }
 
@@ -71,7 +104,7 @@ accum_sp_tsallis <- function(
     neighbors.matrix <- cbind(Reference = 1:X$n, neighbors.matrix)
 
     # Prepare a progress bar and the result arrays
-    if (show_progress & interactive()) {
+    if (show_progress && interactive()) {
       cli::cli_progress_bar("Computing entropy", total = length(neighbors))
     }
     # 3D array: q, n, observed entropy in a single slice
@@ -91,7 +124,6 @@ accum_sp_tsallis <- function(
           Point = row.names(X$marks)
         )
       )
-
     } else {
       ent_q_nr_individuals <- NA
     }
@@ -110,17 +142,18 @@ accum_sp_tsallis <- function(
         neighbor_communities,
         MARGIN = 2,
         FUN = function(community) {
-          sapply(
+          vapply(
             orders,
-            function(q) {
+            FUN = function(q) {
               ent_tsallis(
-                as_abundances.character(community),
+                as_abundances(community),
                 q = q,
                 estimator = "naive",
                 as_numeric = TRUE,
                 check_arguments = FALSE
               )
-            }
+            },
+            FUN.VALUE = 0
           )
         }
       )
@@ -135,21 +168,15 @@ accum_sp_tsallis <- function(
       if (is.null(dim(ent_nbhood_q))) {
         ent_nbhood_q <- t(ent_nbhood_q)
       }
-      ent_q_nr_observed[, k + 1, 1] <- apply(
-        t(t(ent_nbhood_q)),
-        MARGIN = 1,
-        FUN = mean,
-        na.rm = TRUE
-      )
-      if (show_progress & interactive()) cli::cli_progress_update()
+      ent_q_nr_observed[, k + 1, 1] <- rowMeans(ent_nbhood_q, na.rm = TRUE)
+      if (show_progress && interactive()) cli::cli_progress_update()
     }
-    if (show_progress & interactive()) cli::cli_progress_done()
+    if (show_progress && interactive()) cli::cli_progress_done()
 
     # Entropy of a single individual is 0.
     # This is the default value of the arrays so don't run.
     #  ent_q_nr_observed[, 1, 1] <- 0
     #  if (individual) ent_q_nr_individuals[, 1, ] <- 0
-
   } else {
     # A vector of distances ----
     # neighbors up to distance r. Distances are in r.
@@ -173,7 +200,7 @@ accum_sp_tsallis <- function(
     dim(neighbors.array) <- c(X$n, length(r), species_number)
 
     # Prepare a progress bar and the result arrays
-    if (show_progress & interactive()) {
+    if (show_progress && interactive()) {
       cli::cli_progress_bar("Computing entropy", total = length(r))
     }
     # 3D array: q, r, observed entropy in a single slice
@@ -200,16 +227,17 @@ accum_sp_tsallis <- function(
     # At each distance, calculate the entropy of
     # all points' neighborhood for each q
     for (d in 2:length(r)) {
-      # Neighbor communities of each point at distance r: 1 species per column
-      neighbor_communities <- vapply(
-        1:species_number,
-        FUN = function(i) rowSums(neighbors.array[, 1:d, i]),
-        FUN.VALUE = numeric(X$n)
+      # Neighbor communities of each point at distance r:
+      # 1 point per row, 1 species per column:
+      # sum neighborhoods at distances 1 to d
+      neighbor_communities <- rowSums(
+        aperm(neighbors.array[, 1:d, , drop = FALSE], perm = c(1, 3, 2)),
+        dims = 2
       )
       # Calculate entropy of each community and all q values
       if (correction == "none") {
         # No edge-effect correction
-        ent_nbhood_q <-  apply(
+        ent_nbhood_q <- apply(
           neighbor_communities,
           MARGIN = 1,
           FUN = function(community) {
@@ -217,7 +245,7 @@ accum_sp_tsallis <- function(
               orders,
               FUN = function(q) {
                 ent_tsallis(
-                  as_abundances.numeric(community),
+                  as_abundances(community),
                   q = q,
                   estimator = "naive",
                   as_numeric = TRUE,
@@ -253,15 +281,21 @@ accum_sp_tsallis <- function(
             0,
             dim = c(length(orders), nrow(neighbor_communities))
           )
-          for (community in 1:nrow(neighbor_communities)) {
+          for (community in seq_len(nrow(neighbor_communities))) {
             for (order in seq_along(orders)) {
               # Suppress the warnings for Coverage=0 every time neighbors are singletons only.
               suppressWarnings(
                 ent_nbhood_q[order, community] <- ent_tsallis(
                   neighbor_communities[community, ],
                   q = orders[order],
+                  estimator = entropy_estimator,
                   level = the_extrapolation[community],
-                  richness_estimator = richness_estimator, # TODO: check estimator
+                  probability_estimator = probability_estimator,
+                  unveiling = unveiling,
+                  richness_estimator = richness_estimator,
+                  jack_alpha = jack_alpha,
+                  jack_max = jack_max,
+                  coverage_estimator = coverage_estimator,
                   as_numeric = TRUE,
                   check_arguments = FALSE
                 )
@@ -270,7 +304,7 @@ accum_sp_tsallis <- function(
           }
         } else {
           cli::cli_abort(
-            "The edge-effect correction argument correction has not been recognized."
+            "The edge-effect correction (argument: correction) has not been recognized."
           )
         }
       }
@@ -284,15 +318,10 @@ accum_sp_tsallis <- function(
       if (is.null(dim(ent_nbhood_q))) {
         ent_nbhood_q <- t(ent_nbhood_q)
       }
-      ent_q_nr_observed[, d, 1] <- apply(
-        t(t(ent_nbhood_q)),
-        MARGIN = 1,
-        FUN = mean,
-        na.rm = TRUE
-      )
-      if (show_progress & interactive()) cli::cli_progress_update()
+      ent_q_nr_observed[, d, 1] <- rowMeans(ent_nbhood_q, na.rm = TRUE)
+      if (show_progress && interactive()) cli::cli_progress_update()
     }
-    if (show_progress & interactive()) cli::cli_progress_done()
+    if (show_progress && interactive()) cli::cli_progress_done()
     # Entropy at r=0 is 0. This is the default value of the arrays so don't run.
     #  ent_q_nr_observed[, 1, 1] <- 0
     #  if (individual) ent_q_nr_individuals[, 1, ] <- 0
@@ -319,24 +348,44 @@ accum_sp_tsallis <- function(
 #' @export
 #'
 accum_sp_hill <- function(
-    X,
-    orders = 0,
-    neighbors = 1:ceiling(X$n / 2),
-    r = NULL,
-    correction = c("none", "extrapolation"),
-    richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    h0 = c("none", "multinomial", "random location", "binomial"),
-    alpha = 0.05,
-    n_simulations = 100,
-    individual = FALSE,
-    show_progress = TRUE,
-    check_arguments = TRUE) {
-
+  X,
+  orders = 0,
+  neighbors = 1:ceiling(X$n / 2),
+  r = NULL,
+  correction = c("none", "extrapolation"),
+  entropy_estimator = c(
+    "UnveilJ",
+    "ChaoJost",
+    "ChaoShen",
+    "GenCov",
+    "Grassberger",
+    "Marcon",
+    "UnveilC",
+    "UnveiliC",
+    "ZhangGrabchak",
+    "naive",
+    "Bonachela",
+    "Holste"
+  ),
+  richness_estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
+  probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
+  unveiling = c("geometric", "uniform", "none"),
+  jack_alpha = 0.05,
+  jack_max = 10,
+  coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  h0 = c("none", "multinomial", "random location", "binomial"),
+  alpha = 0.05,
+  n_simulations = 100,
+  individual = FALSE,
+  show_progress = TRUE,
+  check_arguments = TRUE
+) {
   # Check arguments
+  entropy_estimator <- match.arg(entropy_estimator)
   richness_estimator <- match.arg(richness_estimator)
   correction <- match.arg(correction)
   h0 <- match.arg(h0)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
   }
 
@@ -358,9 +407,15 @@ accum_sp_hill <- function(
     neighbors = neighbors,
     r = r,
     correction = correction,
+    entropy_estimator = entropy_estimator,
     richness_estimator = richness_estimator,
+    probability_estimator = probability_estimator,
+    unveiling = unveiling,
+    jack_alpha = jack_alpha,
+    jack_max = jack_max,
+    coverage_estimator = coverage_estimator,
     individual = individual,
-    show_progress = (show_progress & (h0 == "none" | h0 == "multinomial")),
+    show_progress = (show_progress && (h0 == "none" || h0 == "multinomial")),
     check_arguments = FALSE
   )
 
@@ -371,7 +426,7 @@ accum_sp_hill <- function(
     is_h0_found <- FALSE
     # Rename accumulation
     names(the_diversity)[2] <- "Entropy"
-    # Put the entropy into a 4-D array.
+    # Put the diversity into a 3-D array.
     # 4 z-values: observed, expected under H0, lower and upper bounds of H0.
     the_diversity$accumulation <- rep(the_diversity$Entropy, 4)
     dim(the_diversity$accumulation) <- c(length(orders), n_cols, 4)
@@ -415,18 +470,24 @@ accum_sp_hill <- function(
     }
     is_h0_found <- TRUE
     # Prepare a progress bar
-    if (show_progress & interactive()) {
+    if (show_progress && interactive()) {
       cli::cli_progress_bar("Running simulations", total = length(orders))
     }
 
     # Prepare the distribution of the abundances of species.
-    abd <- as_abundances.wmppp(X)
+    abd <- as_abundances(X)
     for (order in seq_along(orders)) {
       # Rarefy the community to the sizes of neighborhoods
       h0_values <- accum_hill(
         abd,
         q = as.numeric(orders[order]),
-        levels = the_seq,              # TODO: missing arguments for accum_hill.numeric
+        levels = the_seq,
+        probability_estimator = probability_estimator,
+        unveiling = unveiling,
+        richness_estimator = richness_estimator,
+        jack_alpha = jack_alpha,
+        jack_max = jack_max,
+        coverage_estimator = coverage_estimator,
         n_simulations = n_simulations,
         alpha = alpha,
         show_progress = FALSE,
@@ -436,14 +497,14 @@ accum_sp_hill <- function(
       the_diversity$accumulation[order, , 2] <- h0_values$diversity
       the_diversity$accumulation[order, , 3] <- h0_values$inf
       the_diversity$accumulation[order, , 4] <- h0_values$sup
-      if (show_progress & interactive()) cli::cli_progress_update()
+      if (show_progress && interactive()) cli::cli_progress_update()
     }
-    if (show_progress & interactive()) cli::cli_progress_done()
+    if (show_progress && interactive()) cli::cli_progress_done()
   }
-  if (h0 == "random location" | h0 == "binomial") {
+  if (h0 == "random location" || h0 == "binomial") {
     is_h0_found <- TRUE
     # Prepare a progress bar
-    if (show_progress & interactive()) {
+    if (show_progress && interactive()) {
       cli::cli_progress_bar("Running simulations", total = n_simulations)
     }
     # Prepare a 3-D array to store results. Rows are q, columns are r or n,
@@ -455,35 +516,49 @@ accum_sp_hill <- function(
     # Simulate communities according to H0
     for (i in (1:n_simulations)) {
       # Random community
-      if (h0 == "random location")
+      if (h0 == "random location") {
         h0_X <- dbmss::rRandomLocation(X, CheckArguments = FALSE)
-      if (h0 == "binomial")
+      }
+      if (h0 == "binomial") {
         h0_X <- dbmss::rRandomPositionK(X, CheckArguments = FALSE)
+      }
       # Calculate its accumulated diversity
-      h0_diversity[, , i] <- accum_sp_hill(
+      h0_diversity[,, i] <- accum_sp_hill(
         h0_X,
         orders = orders,
         neighbors = neighbors,
         r = r,
         correction = correction,
+        entropy_estimator = entropy_estimator,
         richness_estimator = richness_estimator,
+        probability_estimator = probability_estimator,
+        unveiling = unveiling,
+        jack_alpha = jack_alpha,
+        jack_max = jack_max,
+        coverage_estimator = coverage_estimator,
         h0 = "none",
-        n_simulations = 0,                 # TODO: check argument list
+        alpha = alpha,
+        n_simulations = 0,
         individual = FALSE,
         show_progress = FALSE,
         check_arguments = FALSE
-      )$accumulation[, , 1]
-      if (show_progress & interactive()) cli::cli_progress_update()
+      )$accumulation[,, 1]
+      if (show_progress && interactive()) cli::cli_progress_update()
     }
-    if (show_progress & interactive()) cli::cli_progress_done()
+    if (show_progress && interactive()) {
+      cli::cli_progress_done()
+    }
     # Calculate quantiles
     for (q in seq_along(orders)) {
-      for (r in seq_along(r)) {
-        the_diversity$accumulation[q, r, 3:4] <- stats::quantile(
-          h0_diversity[q, r, ], c(alpha, 1 - alpha), na.rm = TRUE
+      for (r_i in seq_along(r)) {
+        the_diversity$accumulation[q, r_i, 3:4] <- stats::quantile(
+          h0_diversity[q, r_i, ],
+          c(alpha, 1 - alpha),
+          na.rm = TRUE
         )
-        the_diversity$accumulation[q, r, 2] <- mean(
-          h0_diversity[q, r, ], na.rm = TRUE
+        the_diversity$accumulation[q, r_i, 2] <- mean(
+          h0_diversity[q, r_i, ],
+          na.rm = TRUE
         )
       }
     }
@@ -495,7 +570,11 @@ accum_sp_hill <- function(
     )
   }
 
-  class(the_diversity) <- c("accum_sp_diversity", "accum_sp", class(the_diversity))
+  class(the_diversity) <- c(
+    "accum_sp_diversity",
+    "accum_sp",
+    class(the_diversity)
+  )
   return(the_diversity)
 }
 
@@ -505,24 +584,44 @@ accum_sp_hill <- function(
 #' @export
 #'
 accum_mixing <- function(
-    X,
-    orders = 0,
-    neighbors = 1:ceiling(X$n / 2),
-    r = NULL,
-    correction = c("none", "extrapolation"),
-    richness_estimator = c("rarefy", "jackknife", "iChao1", "Chao1", "naive"),
-    h0 = c("none", "multinomial", "random location", "binomial"),
-    alpha = 0.05,
-    n_simulations = 100,
-    individual = FALSE,
-    show_progress = TRUE,
-    check_arguments = TRUE) {
-
+  X,
+  orders = 0,
+  neighbors = 1:ceiling(X$n / 2),
+  r = NULL,
+  correction = c("none", "extrapolation"),
+  entropy_estimator = c(
+    "UnveilJ",
+    "ChaoJost",
+    "ChaoShen",
+    "GenCov",
+    "Grassberger",
+    "Marcon",
+    "UnveilC",
+    "UnveiliC",
+    "ZhangGrabchak",
+    "naive",
+    "Bonachela",
+    "Holste"
+  ),
+  richness_estimator = c("jackknife", "iChao1", "Chao1", "rarefy", "naive"),
+  probability_estimator = c("Chao2015", "Chao2013", "ChaoShen", "naive"),
+  unveiling = c("geometric", "uniform", "none"),
+  jack_alpha = 0.05,
+  jack_max = 10,
+  coverage_estimator = c("ZhangHuang", "Chao", "Turing", "Good"),
+  h0 = c("none", "multinomial", "random location", "binomial"),
+  alpha = 0.05,
+  n_simulations = 100,
+  individual = FALSE,
+  show_progress = TRUE,
+  check_arguments = TRUE
+) {
   # Check arguments
+  entropy_estimator <- match.arg(entropy_estimator)
   richness_estimator <- match.arg(richness_estimator)
   correction <- match.arg(correction)
   h0 <- match.arg(h0)
-  if (any(check_arguments)) {
+  if (check_arguments) {
     check_divent_args()
   }
 
@@ -533,29 +632,36 @@ accum_mixing <- function(
     neighbors = neighbors,
     r = r,
     correction = correction,
+    entropy_estimator = entropy_estimator,
     richness_estimator = richness_estimator,
+    probability_estimator = probability_estimator,
+    unveiling = unveiling,
+    jack_alpha = jack_alpha,
+    jack_max = jack_max,
+    coverage_estimator = coverage_estimator,
     h0 = h0,
-    n_simulations = n_simulations,                 # TODO: check argument list
-    individual = show_progress,
+    alpha = alpha,
+    n_simulations = n_simulations,
+    individual = individual,
     show_progress = show_progress,
     check_arguments = FALSE
   )
 
   # Normalize it
-  the_mixing$accumulation[, , 1] <- the_mixing$accumulation[, , 1] /
-    the_mixing$accumulation[, , 2]
-  the_mixing$accumulation[, , 3] <- the_mixing$accumulation[, , 3] /
-    the_mixing$accumulation[, , 2]
-  the_mixing$accumulation[, , 4] <- the_mixing$accumulation[, , 4] /
-    the_mixing$accumulation[, , 2]
+  the_mixing$accumulation[,, 1] <- the_mixing$accumulation[,, 1] /
+    the_mixing$accumulation[,, 2]
+  the_mixing$accumulation[,, 3] <- the_mixing$accumulation[,, 3] /
+    the_mixing$accumulation[,, 2]
+  the_mixing$accumulation[,, 4] <- the_mixing$accumulation[,, 4] /
+    the_mixing$accumulation[,, 2]
   # Normalize individual values
   if (individual) {
     for (i in seq_len(X$n)) {
-      the_mixing$neighborhoods[, , i] <- the_mixing$neighborhoods[, , i] /
-        the_mixing$accumulation[, , 2]
+      the_mixing$neighborhoods[,, i] <- the_mixing$neighborhoods[,, i] /
+        the_mixing$accumulation[,, 2]
     }
   }
-  the_mixing$accumulation[, , 2] <- 1
+  the_mixing$accumulation[,, 2] <- 1
 
   class(the_mixing) <- c("accum_sp_mixing", "accum_sp", class(the_mixing))
   return(the_mixing)
